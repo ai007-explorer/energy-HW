@@ -1,0 +1,19 @@
+{
+  "name": "energy-intel",
+  "version": "1.0.0",
+  "description": "华为数字能源竞争情报平台",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "express": "^4.21.2",
+    "node-cron": "^3.0.3",
+    "resend": "^4.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

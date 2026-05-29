@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数字能源竞情平台 · 华为财经管理部</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0A0E14;--surface:#111722;--raised:#18202E;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --red:#E8453C;--red2:#FF6B5E;--red-dim:rgba(232,69,60,0.1);
+  --gold:#E0A82E;--gold-dim:rgba(224,168,46,0.1);
+  --green:#2ECC71;--green-dim:rgba(46,204,113,0.1);
+  --blue:#3B9EFF;--blue-dim:rgba(59,158,255,0.1);
+  --purple:#A855F7;--purple-dim:rgba(168,85,247,0.1);
+  --text:#E6EDF5;--text2:#8B9AAD;--text3:#4A5868;
+  --mono:'Space Mono',monospace;--sans:'Noto Sans SC',sans-serif;--serif:'DM Serif Display',serif;
+  --nav:248px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex;min-height:100vh;overflow-x:hidden;}
+
+/* NAV */
+.nav{width:var(--nav);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;display:flex;flex-direction:column;z-index:200;overflow-y:auto;}
+.nav::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),transparent);}
+.nav-top{padding:22px 18px 16px;border-bottom:1px solid var(--border);}
+.brand{display:flex;align-items:center;gap:9px;margin-bottom:6px;}
+.logo{width:30px;height:30px;background:var(--red);border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:700;font-size:13px;color:#fff;}
+.brand-name{font-size:13px;font-weight:500;letter-spacing:0.02em;}
+.brand-sub{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:0.18em;text-transform:uppercase;margin-top:2px;}
+
+/* competitor add */
+.comp-sec{padding:12px 15px;border-bottom:1px solid var(--border);}
+.sec-label{font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.sec-label .count{margin-left:auto;color:var(--red);}
+.comp-list{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;max-height:168px;overflow-y:auto;}
+.comp-tag{font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--raised);color:var(--text2);display:flex;align-items:center;gap:4px;cursor:default;}
+.comp-tag.hw{border-color:var(--red);background:var(--red-dim);color:var(--red2);}
+.comp-tag .rm{cursor:pointer;color:var(--text3);font-size:11px;}
+.comp-tag .rm:hover{color:var(--red);}
+.add-row{display:flex;gap:5px;}
+.add-inp{flex:1;background:var(--raised);border:1px solid var(--border);border-radius:4px;padding:6px 9px;font-size:11px;color:var(--text);outline:none;font-family:var(--sans);}
+.add-inp:focus{border-color:var(--red);}
+.add-inp::placeholder{color:var(--text3);}
+.add-btn{background:var(--red);color:#fff;border:none;border-radius:4px;padding:6px 11px;font-family:var(--mono);font-size:11px;font-weight:700;cursor:pointer;}
+.add-btn:hover{background:#C9382F;}
+
+/* nav links */
+.nav-links{flex:1;padding:8px 0;}
+.ng{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.18em;text-transform:uppercase;padding:10px 18px 4px;}
+.ni{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;font-size:12.5px;color:var(--text2);border-left:2px solid transparent;transition:all .12s;}
+.ni:hover{color:var(--text);background:rgba(255,255,255,.02);}
+.ni.on{color:var(--red2);border-left-color:var(--red);background:var(--red-dim);}
+.ni-icon{font-size:14px;width:16px;text-align:center;}
+.ni-badge{margin-left:auto;font-family:var(--mono);font-size:9px;background:var(--red);color:#fff;padding:1px 6px;border-radius:3px;font-weight:700;}
+.ni-badge.gold{background:var(--gold);color:var(--bg);}
+.ni-badge.green{background:var(--green);color:var(--bg);}
+
+.nav-foot{padding:12px 16px;border-top:1px solid var(--border);}
+.foot{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.08em;line-height:1.8;}
+.live{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);margin-right:5px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* MAIN */
+.main{margin-left:var(--nav);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.top{height:50px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 26px;gap:12px;position:sticky;top:0;z-index:100;}
+.top-title{font-size:14px;font-weight:500;}
+.top-r{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.search{display:flex;align-items:center;background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:0 11px;gap:7px;width:200px;}
+.search input{background:none;border:none;outline:none;font-size:12px;color:var(--text);font-family:var(--sans);padding:6px 0;flex:1;}
+.btn{font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:6px 13px;border-radius:5px;cursor:pointer;border:none;transition:all .15s;}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2);}
+.btn-ghost:hover{color:var(--text);border-color:rgba(255,255,255,.2);}
+.btn-red{background:var(--red);color:#fff;font-weight:700;}
+.btn-red:hover{background:#C9382F;}
+
+.content{padding:22px 26px;flex:1;}
+.page{display:none;}
+.page.on{display:block;}
+
+/* demo banner */
+.demo-banner{background:var(--gold-dim);border:1px solid rgba(224,168,46,0.3);border-radius:6px;padding:9px 15px;margin-bottom:18px;font-size:11px;color:var(--gold);display:flex;align-items:center;gap:8px;}
+
+/* section header */
+.sh{margin-bottom:18px;display:flex;align-items:flex-end;gap:14px;}
+.sh-eye{font-family:var(--mono);font-size:9px;color:var(--red2);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:4px;}
+.sh-title{font-family:var(--serif);font-size:23px;color:var(--text);font-style:italic;}
+.sh-meta{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto;letter-spacing:0.08em;}
+
+/* cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:7px;overflow:hidden;margin-bottom:14px;transition:border-color .2s;}
+.card:hover{border-color:var(--border2);}
+.ch{display:flex;align-items:center;gap:9px;padding:12px 16px;border-bottom:1px solid var(--border);}
+.cht{font-size:12px;font-weight:500;display:flex;align-items:center;gap:8px;}
+.cht-ico{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;}
+.chr{margin-left:auto;display:flex;gap:7px;align-items:center;}
+
+/* filter pills */
+.pills{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;}
+.pill{font-size:11px;padding:5px 13px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .12s;}
+.pill:hover{color:var(--text);border-color:var(--border2);}
+.pill.on{background:var(--red);color:#fff;border-color:var(--red);}
+
+/* tag */
+.tag{font-family:var(--mono);font-size:9px;letter-spacing:0.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px;font-weight:700;}
+.t-ceo{background:var(--blue-dim);color:var(--blue);}
+.t-fin{background:var(--gold-dim);color:var(--gold);}
+.t-analyst{background:var(--purple-dim);color:var(--purple);}
+.t-news{background:var(--green-dim);color:var(--green);}
+.t-hw{background:var(--red-dim);color:var(--red2);}
+
+/* item (generic feed) */
+.item{padding:15px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;}
+.item:last-child{border-bottom:none;}
+.item:hover{background:rgba(255,255,255,.015);}
+.item-meta{display:flex;align-items:center;gap:8px;margin-bottom:7px;flex-wrap:wrap;}
+.item-comp{font-size:11px;font-weight:500;color:var(--text);}
+.item-date{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto;}
+.item-title{font-size:13px;font-weight:500;color:var(--text);line-height:1.5;margin-bottom:6px;}
+.item-summary{font-size:12px;color:var(--text2);line-height:1.7;}
+.item-quote{margin-top:9px;padding:9px 13px;border-left:2px solid var(--blue);background:var(--blue-dim);font-style:italic;font-size:12.5px;color:var(--text);line-height:1.6;border-radius:0 4px 4px 0;}
+.source-row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.source-link{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--blue);text-decoration:none;padding:3px 8px;border:1px solid var(--border);border-radius:4px;}
+.source-link:hover{border-color:var(--blue);background:var(--blue-dim);}
+.source-official{border-color:rgba(46,204,113,0.3);color:var(--green);}
+.source-official:hover{background:var(--green-dim);}
+.audit-badge{font-family:var(--mono);font-size:8px;color:var(--text3);letter-spacing:0.08em;display:flex;align-items:center;gap:4px;}
+
+/* impact box for news */
+.impact{margin-top:10px;background:var(--red-dim);border-left:2px solid var(--red);padding:9px 13px;border-radius:0 4px 4px 0;}
+.impact-label{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:0.1em;color:var(--red2);text-transform:uppercase;margin-bottom:3px;}
+.impact-text{font-size:11.5px;color:var(--text);line-height:1.6;}
+.forward-btn{margin-top:8px;background:var(--red);color:#fff;border:none;border-radius:5px;padding:6px 14px;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.06em;display:inline-flex;align-items:center;gap:5px;}
+.forward-btn:hover{background:#C9382F;}
+
+/* financial table */
+.fin-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.fin-tbl th{font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);padding:9px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--raised);}
+.fin-tbl td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.fin-tbl tr:last-child td{border-bottom:none;}
+.fin-tbl tr:hover td{background:rgba(255,255,255,.01);}
+.fin-comp{font-weight:500;font-size:13px;}
+.fin-val{font-family:var(--mono);font-weight:500;}
+.up{color:var(--green);}
+.down{color:var(--red2);}
+
+/* rating */
+.rating{display:inline-flex;align-items:center;gap:5px;}
+.rating-dot{width:7px;height:7px;border-radius:50%;}
+.r-buy{background:var(--green);}
+.r-hold{background:var(--gold);}
+.r-sell{background:var(--red);}
+.r-lbl{font-family:var(--mono);font-size:10px;font-weight:700;}
+
+/* analyst card */
+.analyst-card{border:1px solid var(--border);border-radius:6px;padding:14px;}
+.analyst-firm{font-family:var(--mono);font-size:10px;color:var(--text2);margin-bottom:3px;}
+.analyst-target{font-size:11px;color:var(--text);margin:6px 0;}
+.analyst-note{font-size:11.5px;color:var(--text2);line-height:1.6;}
+
+/* stat cards */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-bottom:18px;}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:15px 17px;position:relative;overflow:hidden;}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent,var(--red));}
+.stat-label{font-size:11px;color:var(--text2);margin-bottom:6px;}
+.stat-big{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;margin-bottom:4px;}
+.stat-desc{font-size:11px;color:var(--text2);line-height:1.5;}
+
+/* grids */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+
+/* modal */
+.mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;}
+.mbg.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:9px;width:680px;max-width:93vw;max-height:88vh;overflow-y:auto;padding:28px;position:relative;}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--gold));border-radius:9px 9px 0 0;}
+.mx{position:absolute;top:13px;right:13px;background:var(--raised);border:1px solid var(--border);color:var(--text2);width:27px;height:27px;display:flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;font-size:13px;}
+.mx:hover{color:var(--text);}
+.m-eye{font-family:var(--mono);font-size:9px;color:var(--red2);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:8px;}
+.m-title{font-size:16px;font-weight:500;line-height:1.5;margin-bottom:4px;}
+.m-meta{font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:16px;}
+.m-body{font-size:13px;color:var(--text2);line-height:1.8;}
+.m-sec{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.18em;text-transform:uppercase;margin:18px 0 10px;display:flex;align-items:center;gap:8px;}
+.m-sec::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* empty */
+.empty{text-align:center;padding:36px;}
+.empty-i{font-size:28px;margin-bottom:10px;opacity:.35;}
+.empty-t{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--green);color:var(--bg);padding:11px 22px;border-radius:7px;font-size:12px;font-weight:500;z-index:600;transition:transform .3s;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-top">
+    <div class="brand">
+      <div class="logo">华</div>
+      <div>
+        <div class="brand-name">数字能源竞情</div>
+        <div class="brand-sub">财经管理部 · 内部</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comp-sec">
+    <div class="sec-label">追踪友商 <span class="count" id="comp-count">0</span></div>
+    <div class="comp-list" id="comp-list"></div>
+    <div class="add-row">
+      <input type="text" class="add-inp" id="comp-add" placeholder="增加友商，回车" onkeydown="if(event.key==='Enter')addComp()">
+      <button class="add-btn" onclick="addComp()">+</button>
+    </div>
+  </div>
+
+  <div class="nav-links">
+    <div class="ng">情报模块</div>
+    <div class="ni on" onclick="gp('ceo',this)"><span class="ni-icon">🎤</span>高管发言追踪<span class="ni-badge" id="b-ceo">0</span></div>
+    <div class="ni" onclick="gp('financial',this)"><span class="ni-icon">💰</span>财报披露<span class="ni-badge gold" id="b-fin">0</span></div>
+    <div class="ni" onclick="gp('analyst',this)"><span class="ni-icon">📊</span>分析师观点<span class="ni-badge" id="b-ana">0</span></div>
+    <div class="ni" onclick="gp('news',this)"><span class="ni-icon">🔥</span>热点新闻解读<span class="ni-badge green" id="b-news">0</span></div>
+    <div class="ng">深度分析</div>
+    <div class="ni" onclick="gp('moat',this)"><span class="ni-icon">🏰</span>长期竞争优势<span class="ni-badge gold">深度</span></div>
+    <div class="ng">推送订阅</div>
+    <div class="ni" onclick="gp('subscribe',this)"><span class="ni-icon">📬</span>邮件订阅</div>
+  </div>
+
+  <div class="nav-foot">
+    <div class="foot"><span class="live"></span>仅追踪 7 天内信息</div>
+    <div class="foot" style="margin-top:3px;">每日北京时间 07:00 推送</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="top">
+    <div class="top-title" id="top-title">高管发言追踪</div>
+    <div class="top-r">
+      <div class="search">
+        <span style="font-size:12px;color:var(--text3);">🔍</span>
+        <input type="text" placeholder="搜索友商、关键词..." id="search-inp" oninput="doSearch(this.value)">
+      </div>
+      <button class="btn btn-ghost" onclick="showToast('演示版：接入API后可手动刷新抓取')">↺ 抓取更新</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="demo-banner" style="background:var(--green-dim);border-color:rgba(46,204,113,0.3);color:var(--green);">
+      <span>🟢</span> 实时模式 · 每日北京时间 06:00 自动抓取最新竞情，07:00 推送邮件。所有信息均为 7 天内动态，来源可审计。首次部署后请等待抓取或手动触发。
+    </div>
+
+    <!-- CEO -->
+    <div class="page on" id="page-ceo">
+      <div class="sh"><div><div class="sh-eye">Leadership Tracking</div><div class="sh-title">高管发言追踪</div></div><div class="sh-meta">华为数字能源 + 友商 CEO/老板</div></div>
+      <div class="pills" id="ceo-pills"></div>
+      <div class="card"><div id="ceo-feed"></div></div>
+    </div>
+
+    <!-- FINANCIAL -->
+    <div class="page" id="page-financial">
+      <div class="sh"><div><div class="sh-eye">Financial Disclosure</div><div class="sh-title">财报披露追踪</div></div><div class="sh-meta">季度财报 · 业绩预告 · 官方公告</div></div>
+      <div class="stats-row" id="fin-stats"></div>
+      <div class="card">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--gold-dim);">💰</div>最新财务披露</div></div>
+        <div style="overflow-x:auto;"><table class="fin-tbl"><thead><tr><th>公司</th><th>报告期</th><th>营收</th><th>同比</th><th>净利润</th><th>披露日期</th><th>来源</th></tr></thead><tbody id="fin-tbody"></tbody></table></div>
+      </div>
+      <div class="card"><div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--gold-dim);">📋</div>财报要点总结</div></div><div id="fin-summary"></div></div>
+    </div>
+
+    <!-- ANALYST -->
+    <div class="page" id="page-analyst">
+      <div class="sh"><div><div class="sh-eye">Analyst Coverage</div><div class="sh-title">分析师观点汇总</div></div><div class="sh-meta">国际投行优先 · 评级 + 目标价</div></div>
+      <div class="pills" id="ana-pills"></div>
+      <div class="g2" id="analyst-grid" style="margin-bottom:14px;"></div>
+      <div class="card"><div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--purple-dim);">🔬</div>投行观点深度提炼</div></div><div id="analyst-feed"></div></div>
+    </div>
+
+    <!-- NEWS -->
+    <div class="page" id="page-news">
+      <div class="sh"><div><div class="sh-eye">Hot News & Insights</div><div class="sh-title">热点新闻解读</div></div><div class="sh-meta">一键转发 · 对华为经营启示</div></div>
+      <div class="pills" id="news-pills"></div>
+      <div class="card"><div id="news-feed"></div></div>
+    </div>
+
+    <!-- MOAT (长期竞争优势) -->
+    <div class="page" id="page-moat">
+      <div class="sh"><div><div class="sh-eye">Long-term Competitive Moat</div><div class="sh-title">长期竞争优势分析</div></div><div class="sh-meta">基于讲话 · 财报 · 战略披露综合提炼</div></div>
+      <div class="demo-banner" style="background:var(--blue-dim);border-color:rgba(59,158,255,0.3);color:var(--blue);">
+        <span>🏰</span> 本板块综合各公司领导人讲话、财务数据、财报披露的战略信息，提炼每家的长期竞争优势及其维持策略。
+      </div>
+      <div class="pills" id="moat-pills"></div>
+      <div id="moat-feed"></div>
+    </div>
+
+    <!-- SUBSCRIBE -->
+    <div class="page" id="page-subscribe">
+      <div class="sh"><div><div class="sh-eye">Email Subscription</div><div class="sh-title">邮件订阅</div></div><div class="sh-meta">每日北京时间 07:00 推送</div></div>
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--green-dim);">📬</div>订阅每日竞情简报</div></div>
+          <div style="padding:18px;">
+            <div style="background:var(--green-dim);border:1px solid rgba(46,204,113,0.2);border-radius:6px;padding:10px 14px;font-family:var(--mono);font-size:10px;color:var(--green);letter-spacing:0.05em;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+              <span>⏰</span> 每天北京时间 07:00 · 推送过去24小时竞情摘要
+            </div>
+            <label style="font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;display:block;">填写邮箱地址</label>
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
+              <input type="email" id="sub-email" placeholder="your@email.com" style="flex:1;background:var(--raised);border:1px solid var(--border2);border-radius:5px;padding:9px 12px;font-size:13px;color:var(--text);outline:none;font-family:var(--sans);" onkeydown="if(event.key==='Enter')addSub()">
+              <button class="btn btn-red" onclick="addSub()" style="padding:9px 18px;">订阅</button>
+            </div>
+            <div style="font-size:11px;color:var(--text3);line-height:1.7;">
+              简报内容包括：友商高管最新发言、新增财报披露、分析师评级变动、热点新闻及对华为的启示。所有信息均为 7 天内的最新动态。
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--blue-dim);">👥</div>当前订阅者</div><div class="chr"><span class="tag t-news" id="sub-count">0 人</span></div></div>
+          <div style="padding:14px;">
+            <div id="sub-list" style="display:flex;flex-direction:column;gap:5px;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--gold-dim);">📋</div>每日简报预览</div></div>
+        <div style="padding:16px;" id="digest-preview"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mbg" id="mbg" onclick="if(event.target===this)closeM()">
+  <div class="modal"><button class="mx" onclick="closeM()">✕</button><div id="minner"></div></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════ LIVE DATA (从后端API加载) ═══════════
+let competitors = [];
+let ceoData = [];
+let finData = [];
+let analystData = [];
+let newsData = [];
+let moatData = [];
+let subscriberCount = 0;
+
+// 真实7天过滤（后端已过滤，前端再保险一次）
+function within7DaysDemo(dateStr){
+  const d=new Date(dateStr), now=new Date();
+  const diff = now-d;
+  return diff <= 7*24*3600*1000 && diff >= -24*3600*1000;
+}
+const DEMO_NOW = new Date(); // 真实当前时间
+
+// 从后端加载所有数据
+async function loadData(){
+  try{
+    const r = await fetch('/api/data');
+    const d = await r.json();
+    competitors = (d.competitors||[]).map(name=>({name, hw: name==='华为数字能源'}));
+    ceoData = d.ceo||[];
+    finData = d.financial||[];
+    analystData = d.analyst||[];
+    newsData = d.news||[];
+    moatData = d.moat||[];
+    subscriberCount = d.subscriberCount||0;
+    // 渲染
+    renderComps();
+    renderCeo();
+    renderFin();
+    renderAnalyst();
+    renderNews();
+    updateLastFetch(d.lastFetch);
+  }catch(e){
+    console.error('加载数据失败', e);
+    showToast('数据加载失败，请刷新');
+  }
+}
+
+function updateLastFetch(ts){
+  const el = document.querySelector('.nav-foot .foot');
+  if(el && ts){
+    const d = new Date(ts);
+    el.innerHTML = '<span class="live"></span>更新于 '+d.toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
+  }
+}
+
+// ═══════════ RENDER ═══════════
+function renderComps(){
+  document.getElementById('comp-count').textContent=competitors.length;
+  document.getElementById('comp-list').innerHTML=competitors.map((c,i)=>`
+    <div class="comp-tag ${c.hw?'hw':''}">${c.name}${!c.hw?`<span class="rm" onclick="rmComp(${i})">✕</span>`:''}</div>`).join('');
+  renderPills();
+}
+async function addComp(){
+  const inp=document.getElementById('comp-add'),n=inp.value.trim();
+  if(!n||competitors.some(c=>c.name===n)){inp.value='';return;}
+  inp.value='';
+  try{
+    const r=await fetch('/api/competitors/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})});
+    const d=await r.json();
+    competitors=(d.competitors||[]).map(name=>({name,hw:name==='华为数字能源'}));
+    renderComps();showToast('已添加：'+n+'（下次抓取生效）');
+  }catch(e){showToast('添加失败');}
+}
+async function rmComp(i){
+  if(competitors[i].hw)return;
+  const name=competitors[i].name;
+  try{
+    const r=await fetch('/api/competitors/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});
+    const d=await r.json();
+    competitors=(d.competitors||[]).map(nm=>({name:nm,hw:nm==='华为数字能源'}));
+    renderComps();
+  }catch(e){showToast('删除失败');}
+}
+
+function renderPills(){
+  const names=['全部',...competitors.map(c=>c.name)];
+  ['ceo','ana','news'].forEach(p=>{
+    const el=document.getElementById(p+'-pills');
+    if(!el)return;
+    el.innerHTML=names.slice(0,9).map((n,i)=>`<span class="pill ${i===0?'on':''}" onclick="filterFeed('${p}',this,'${n}')">${n}</span>`).join('');
+  });
+}
+
+function srcRow(sources){
+  return `<div class="source-row">
+    ${sources.map(s=>`<a class="source-link ${s.official?'source-official':''}" href="${s.url}" target="_blank" onclick="event.stopPropagation()">${s.official?'✓ 官方':'↗'} ${s.label}</a>`).join('')}
+    <span class="audit-badge">🔒 来源可审计</span>
+  </div>`;
+}
+
+function renderCeo(filter='全部'){
+  let data=(filter==='全部'?ceoData:ceoData.filter(d=>d.comp===filter)).filter(d=>within7DaysDemo(d.date));
+  document.getElementById('b-ceo').textContent=ceoData.filter(d=>within7DaysDemo(d.date)).length;
+  const el=document.getElementById('ceo-feed');
+  if(!data.length){el.innerHTML='<div class="empty"><div class="empty-i">🎤</div><div class="empty-t">无匹配数据</div></div>';return;}
+  el.innerHTML=data.map(d=>`
+    <div class="item" onclick="openCeo('${d.id}')">
+      <div class="item-meta">
+        <span class="tag ${d.comp==='华为数字能源'?'t-hw':'t-ceo'}">${d.comp==='华为数字能源'?'华为':'高管'}</span>
+        <span class="item-comp">${d.comp} · ${d.person}</span>
+        <span class="item-date">${d.date}</span>
+      </div>
+      <div class="item-title">${d.title}</div>
+      <div class="item-summary">${d.summary}</div>
+      <div class="item-quote">${d.quote}</div>
+      ${srcRow(d.sources)}
+    </div>`).join('');
+}
+
+function renderFin(){
+  document.getElementById('b-fin').textContent=finData.length;
+  document.getElementById('fin-stats').innerHTML=`
+    <div class="stat" style="--accent:var(--gold);"><div class="stat-label">本期披露</div><div class="stat-big" style="font-size:24px;">${finData.length}</div><div class="stat-desc">家友商财报</div></div>
+    <div class="stat" style="--accent:var(--green);"><div class="stat-label">营收增速最快</div><div class="stat-big">德业股份</div><div class="stat-desc">同比 +42.7%</div></div>
+    <div class="stat" style="--accent:var(--red);"><div class="stat-label">储能增速亮点</div><div class="stat-big">阳光电源</div><div class="stat-desc">储能出货 +82%</div></div>
+    <div class="stat" style="--accent:var(--blue);"><div class="stat-label">毛利率领先</div><div class="stat-big">特斯拉能源</div><div class="stat-desc">24.6% 超汽车业务</div></div>`;
+  document.getElementById('fin-tbody').innerHTML=finData.map(f=>`
+    <tr>
+      <td><div class="fin-comp">${f.comp}</div></td>
+      <td><span class="tag t-fin">${f.period}</span></td>
+      <td><div class="fin-val">${f.rev}</div></td>
+      <td><div class="fin-val up">${f.yoy}</div></td>
+      <td><div class="fin-val">${f.profit}</div></td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text2);">${f.date}</td>
+      <td><a class="source-link source-official" href="${f.source}" target="_blank">✓ 官方</a></td>
+    </tr>`).join('');
+  document.getElementById('fin-summary').innerHTML=finData.map(f=>`
+    <div class="item">
+      <div class="item-meta"><span class="tag t-fin">${f.period}</span><span class="item-comp">${f.comp}</span><span class="item-date">${f.date}</span></div>
+      <div class="item-summary">${f.summary}</div>
+      ${srcRow([{label:f.comp+' 官方披露',url:f.source,official:true}])}
+    </div>`).join('');
+}
+
+function renderAnalyst(filter='全部'){
+  document.getElementById('b-ana').textContent=analystData.length;
+  let data=filter==='全部'?analystData:analystData.filter(d=>d.comp===filter);
+  const rm={buy:['r-buy','买入'],hold:['r-hold','中性'],sell:['r-sell','卖出']};
+  document.getElementById('analyst-grid').innerHTML=data.map(a=>`
+    <div class="analyst-card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span class="analyst-firm">${a.firm}</span>
+        <span class="rating" style="margin-left:auto;"><span class="rating-dot ${rm[a.rating][0]}"></span><span class="r-lbl ${a.rating==='buy'?'up':a.rating==='sell'?'down':''}" style="color:${a.rating==='hold'?'var(--gold)':''}">${rm[a.rating][1]}</span></span>
+      </div>
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px;">${a.comp}</div>
+      <div class="analyst-target">目标价 <strong style="font-family:var(--mono);">${a.target}</strong> · ${a.date}</div>
+      <div class="analyst-note">${a.note}</div>
+      ${srcRow([{label:a.firm,url:a.source}])}
+    </div>`).join('');
+  document.getElementById('analyst-feed').innerHTML=data.map(a=>`
+    <div class="item">
+      <div class="item-meta"><span class="tag t-analyst">${a.firm.split(' ')[0]}</span><span class="item-comp">${a.comp} · 目标价 ${a.target}</span><span class="item-date">${a.date}</span></div>
+      <div class="item-summary">${a.note}</div>
+      ${srcRow([{label:a.firm+' 研报',url:a.source}])}
+    </div>`).join('');
+}
+
+function renderNews(filter='全部'){
+  document.getElementById('b-news').textContent=newsData.filter(d=>within7DaysDemo(d.date)).length;
+  let data=(filter==='全部'?newsData:newsData.filter(d=>d.comp===filter)).filter(d=>within7DaysDemo(d.date));
+  const el=document.getElementById('news-feed');
+  if(!data.length){el.innerHTML='<div class="empty"><div class="empty-i">🔥</div><div class="empty-t">无匹配数据</div></div>';return;}
+  el.innerHTML=data.map(d=>`
+    <div class="item" style="cursor:default;">
+      <div class="item-meta"><span class="tag t-news">热点</span><span class="item-comp">${d.comp}</span><span class="item-date">${d.date}</span></div>
+      <div class="item-title">${d.title}</div>
+      <div class="item-summary">${d.summary}</div>
+      <div class="impact">
+        <div class="impact-label">▸ 对华为数字能源的启示</div>
+        <div class="impact-text">${d.impact}</div>
+      </div>
+      ${srcRow(d.sources)}
+      <button class="forward-btn" onclick="forwardNews('${d.id}')">📤 一键复制解读转发</button>
+    </div>`).join('');
+}
+
+function forwardNews(id){
+  const d=newsData.find(x=>x.id===id);
+  const text=`【数字能源竞情速递】\n\n${d.title}\n\n${d.summary}\n\n💡 对华为启示：\n${d.impact}\n\n来源：${d.sources.map(s=>s.label+' '+s.url).join(' / ')}\n\n（华为财经管理部 · 竞情平台）`;
+  navigator.clipboard.writeText(text).then(()=>showToast('✓ 解读已复制，可粘贴转发'));
+}
+
+// ═══════════ FILTER & NAV ═══════════
+function filterFeed(page,el,name){
+  el.parentElement.querySelectorAll('.pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  if(page==='ceo')renderCeo(name);
+  if(page==='ana')renderAnalyst(name);
+  if(page==='news')renderNews(name);
+  if(page==='moat')renderMoat(name);
+}
+
+// ═══════════ MOAT ═══════════
+function renderMoatPills(){
+  const el=document.getElementById('moat-pills');
+  if(!el)return;
+  const names=['全部',...moatData.map(m=>m.comp)];
+  el.innerHTML=names.map((n,i)=>`<span class="pill ${i===0?'on':''}" onclick="filterFeed('moat',this,'${n}')">${n}</span>`).join('');
+}
+function renderMoat(filter='全部'){
+  let data=filter==='全部'?moatData:moatData.filter(m=>m.comp===filter);
+  document.getElementById('moat-feed').innerHTML=data.map(m=>`
+    <div class="card">
+      <div class="ch"><div class="cht"><div class="cht-ico" style="background:${m.hw?'var(--red-dim)':'var(--blue-dim)'};">${m.hw?'华':'🏢'}</div>${m.comp}</div><div class="chr"><span class="tag ${m.hw?'t-hw':'t-analyst'}">${m.hw?'华为':'友商'}</span></div></div>
+      <div style="padding:16px;">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px;">核心长期竞争优势</div>
+        <div style="display:flex;flex-direction:column;gap:9px;margin-bottom:16px;">
+          ${m.advantages.map((a,i)=>`<div style="display:flex;gap:10px;"><span style="font-family:var(--mono);font-size:13px;color:${m.hw?'var(--red2)':'var(--blue)'};font-weight:700;flex-shrink:0;">0${i+1}</span><span style="font-size:12.5px;color:var(--text);line-height:1.6;">${a}</span></div>`).join('')}
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:8px;">如何维持优势<span style="flex:1;height:1px;background:var(--border);"></span></div>
+        <div style="background:${m.hw?'var(--red-dim)':'var(--gold-dim)'};border-left:2px solid ${m.hw?'var(--red)':'var(--gold)'};padding:11px 14px;border-radius:0 5px 5px 0;font-size:12px;color:var(--text);line-height:1.7;margin-bottom:12px;">${m.strategy}</div>
+        ${srcRow(m.sources)}
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════ SUBSCRIBE ═══════════
+async function addSub(){
+  const inp=document.getElementById('sub-email'),email=inp.value.trim();
+  if(!email||!email.includes('@')){showToast('请输入有效邮箱');return;}
+  inp.value='';
+  try{
+    const r=await fetch('/api/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    const d=await r.json();
+    if(d.ok){subscriberCount=d.count;renderSubs();showToast('✓ 订阅成功，每日北京时间 07:00 推送');}
+    else showToast(d.msg||'订阅失败');
+  }catch(e){showToast('订阅失败');}
+}
+function renderSubs(){
+  document.getElementById('sub-count').textContent=subscriberCount+' 人';
+  const el=document.getElementById('sub-list');
+  el.innerHTML=`<div style="font-size:12px;color:var(--text2);line-height:1.8;">
+    当前共 <strong style="color:var(--text);">${subscriberCount}</strong> 人订阅每日竞情日报。<br>
+    <span style="font-size:11px;color:var(--text3);">为保护隐私，订阅者邮箱不公开显示。如需退订，请回复邮件中的退订链接。</span>
+  </div>`;
+}
+function renderDigest(){
+  const ceo=ceoData.filter(d=>within7DaysDemo(d.date)).slice(0,2);
+  const news=newsData.filter(d=>within7DaysDemo(d.date)).slice(0,2);
+  document.getElementById('digest-preview').innerHTML=`
+    <div style="background:var(--raised);border:1px solid var(--border);border-radius:6px;padding:18px;font-size:12px;line-height:1.9;color:var(--text2);">
+      <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">📊 数字能源竞情日报</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:14px;">北京时间 ${DEMO_NOW.toLocaleDateString('zh-CN')} 07:00 · 华为财经管理部</div>
+      <div style="color:var(--blue);font-weight:600;margin-bottom:6px;">▸ 高管动态</div>
+      ${ceo.map(c=>`<div style="margin-bottom:8px;">· <strong style="color:var(--text);">${c.comp}</strong>：${c.title}</div>`).join('')}
+      <div style="color:var(--green);font-weight:600;margin:12px 0 6px;">▸ 热点解读</div>
+      ${news.map(n=>`<div style="margin-bottom:8px;">· <strong style="color:var(--text);">${n.comp}</strong>：${n.title}<br><span style="color:var(--text3);font-size:11px;">启示：${n.impact.slice(0,50)}...</span></div>`).join('')}
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:10px;color:var(--text3);">仅含 7 天内最新信息 · 来源可审计 · 退订请回复邮件</div>
+    </div>
+    <button class="btn btn-ghost" style="margin-top:12px;" onclick="copyDigest()">📋 复制简报内容</button>`;
+}
+function copyDigest(){
+  const ceo=ceoData.filter(d=>within7DaysDemo(d.date)).slice(0,2);
+  const news=newsData.filter(d=>within7DaysDemo(d.date)).slice(0,2);
+  let t=`数字能源竞情日报 · ${DEMO_NOW.toLocaleDateString('zh-CN')}\n\n【高管动态】\n`;
+  ceo.forEach(c=>t+=`· ${c.comp}：${c.title}\n`);
+  t+=`\n【热点解读】\n`;
+  news.forEach(n=>t+=`· ${n.comp}：${n.title}\n  启示：${n.impact}\n`);
+  t+=`\n（华为财经管理部 · 竞情平台 · 仅含7天内信息）`;
+  navigator.clipboard.writeText(t).then(()=>showToast('✓ 简报已复制'));
+}
+
+const titles={ceo:'高管发言追踪',financial:'财报披露追踪',analyst:'分析师观点汇总',news:'热点新闻解读',moat:'长期竞争优势',subscribe:'邮件订阅'};
+function gp(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('page-'+id).classList.add('on');
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  if(el)el.classList.add('on');
+  document.getElementById('top-title').textContent=titles[id];
+  if(id==='financial')renderFin();
+  if(id==='moat'){renderMoatPills();renderMoat();}
+  if(id==='subscribe'){renderSubs();renderDigest();}
+}
+
+function openCeo(id){
+  const d=ceoData.find(x=>x.id===id);
+  document.getElementById('minner').innerHTML=`
+    <div class="m-eye">${d.date} · ${d.person}</div>
+    <div class="m-title">${d.title}</div>
+    <div class="m-meta">${d.comp}</div>
+    <div class="m-sec">发言总结</div>
+    <div class="m-body">${d.summary}</div>
+    <div class="m-sec">核心观点原文</div>
+    <div class="item-quote" style="margin:0;">${d.quote}</div>
+    <div class="m-sec">信息来源（可审计）</div>
+    ${srcRow(d.sources)}`;
+  document.getElementById('mbg').classList.add('open');
+}
+function closeM(){document.getElementById('mbg').classList.remove('open');}
+
+function doSearch(q){
+  if(!q){renderCeo();return;}
+  // simple cross-page search on current page
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+
+// ═══════════ INIT ═══════════
+loadData();
+// 每5分钟自动刷新一次数据
+setInterval(loadData, 5*60*1000);
+</script>
+</body>
+</html>
