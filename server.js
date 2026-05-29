@@ -82,27 +82,56 @@ async function askClaude(systemPrompt, userPrompt, useSearch = true) {
   if (!anthropic) throw new Error('ANTHROPIC_API_KEY 未配置');
   const params = {
     model: 'claude-sonnet-4-5',
-    max_tokens: 4000,
+    max_tokens: 8000,
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }]
   };
   if (useSearch) {
-    params.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 8 }];
+    params.tools = [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }];
   }
   const resp = await anthropic.messages.create(params);
   return resp.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
 }
 
 function parseJSON(text) {
-  const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-  const start = Math.min(
-    clean.indexOf('{') >= 0 ? clean.indexOf('{') : Infinity,
-    clean.indexOf('[') >= 0 ? clean.indexOf('[') : Infinity
-  );
-  if (start === Infinity) throw new Error('no JSON');
-  // find matching end
-  const sub = clean.slice(start);
-  return JSON.parse(sub);
+  // strip markdown fences
+  let clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  // find first [ or {
+  const arrIdx = clean.indexOf('[');
+  const objIdx = clean.indexOf('{');
+  let start = Infinity;
+  if (arrIdx >= 0) start = Math.min(start, arrIdx);
+  if (objIdx >= 0) start = Math.min(start, objIdx);
+  if (start === Infinity) throw new Error('no JSON found');
+  clean = clean.slice(start);
+  // Try parsing; if it fails due to truncation, try to recover array
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    // Try to recover a partial array by finding complete objects
+    if (clean.startsWith('[')) {
+      const items = [];
+      let depth = 0, inStr = false, escape = false, objStart = -1;
+      for (let i = 0; i < clean.length; i++) {
+        const c = clean[i];
+        if (escape) { escape = false; continue; }
+        if (c === '\\' && inStr) { escape = true; continue; }
+        if (c === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+        if (c === '{') { if (depth === 1) objStart = i; depth++; }
+        else if (c === '}') {
+          depth--;
+          if (depth === 1 && objStart >= 0) {
+            try { items.push(JSON.parse(clean.slice(objStart, i + 1))); } catch {}
+            objStart = -1;
+          }
+        } else if (c === '[') depth++;
+        else if (c === ']') depth--;
+      }
+      if (items.length > 0) { console.log(`[parseJSON] 恢复了 ${items.length} 条`); return items; }
+    }
+    throw e;
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -160,48 +189,54 @@ async function fetchAnalyst() {
 }
 
 async function fetchNews() {
-  const comps = store.competitors.filter(c => c !== '华为数字能源').join('、');
-  const sys = `你是华为数字能源的竞争情报分析师。收集友商过去7天的重大热点新闻，并分析每条对华为数字能源经营的启示。仅回复JSON数组。`;
-  const prompt = `搜索以下数字能源友商过去7天的重大热点新闻：${comps}
+  const comps = store.competitors.filter(c => c !== '华为数字能源');
+  // 分批处理，每批5家，避免JSON过长被截断
+  const batchSize = 5;
+  let allItems = [];
+  for (let i = 0; i < comps.length; i += batchSize) {
+    const batch = comps.slice(i, i + batchSize).join('、');
+    const sys = `你是华为数字能源的竞争情报分析师。收集友商过去7天的重大热点新闻，分析每条对华为数字能源经营的启示。仅回复JSON数组，严格控制每条字数。`;
+    const prompt = `搜索以下数字能源友商过去7天的重大热点新闻（每家最多2条）：${batch}
 
-返回JSON数组，每条：
-{"id":"唯一id","comp":"公司名","date":"YYYY-MM-DD","title":"新闻标题","summary":"新闻摘要(中文100字)","impact":"对华为数字能源的启示和应对建议(中文120字)","sources":[{"label":"来源名","url":"链接","official":true或false}]}
+返回JSON数组，每条字段严格简短：
+{"id":"uid","comp":"公司名","date":"YYYY-MM-DD","title":"标题(30字内)","summary":"摘要(60字内)","impact":"对华为启示(60字内)","sources":[{"label":"来源","url":"链接","official":false}]}
 
-只返回过去7天内的真实新闻，找不到返回[]。务必附真实来源。`;
-  const raw = await askClaude(sys, prompt, true);
-  try {
-    let items = parseJSON(raw);
-    if (!Array.isArray(items)) items = items.results || items.data || [];
-    return items.filter(x => x && x.title);
-  } catch (e) { console.error('fetchNews parse', e); return []; }
+只返回过去7天真实新闻，找不到返回[]。`;
+    const raw = await askClaude(sys, prompt, true);
+    try {
+      let items = parseJSON(raw);
+      if (!Array.isArray(items)) items = items.results || items.data || [];
+      allItems = allItems.concat(items.filter(x => x && x.title));
+    } catch (e) { console.error('fetchNews batch parse', e.message); }
+  }
+  return allItems;
 }
 
 async function generateMoat() {
-  // 基于已抓取的讲话/财报/新闻，提炼长期竞争优势
-  const ctx = {
-    ceo: store.ceo.slice(0, 10).map(c => `${c.comp}-${c.person}: ${c.summary}`),
-    fin: store.financial.slice(0, 8).map(f => `${f.comp} ${f.period}: ${f.summary}`),
-    news: store.news.slice(0, 8).map(n => `${n.comp}: ${n.title}`)
-  };
-  const sys = `你是战略分析师。基于领导人讲话、财报数据、热点新闻，提炼每家公司的长期竞争优势及维持策略。仅回复JSON数组。`;
-  const prompt = `基于以下信息，为每家数字能源公司提炼长期竞争优势：
+  const batchSize = 4;
+  let allItems = [];
+  for (let i = 0; i < store.competitors.length; i += batchSize) {
+    const batch = store.competitors.slice(i, i + batchSize);
+    const ctx = {
+      ceo: store.ceo.filter(c => batch.includes(c.comp)).map(c => `${c.comp}: ${c.summary||c.title}`).slice(0,6),
+      fin: store.financial.filter(f => batch.includes(f.comp)).map(f => `${f.comp}: ${f.summary}`).slice(0,4),
+      news: store.news.filter(n => batch.includes(n.comp)).map(n => `${n.comp}: ${n.title}`).slice(0,6)
+    };
+    const sys = `你是战略分析师。基于提供的信息提炼每家公司长期竞争优势，字数严格简短。仅回复JSON数组。`;
+    const prompt = `为以下公司提炼长期竞争优势：${batch.join('、')}
 
-领导人讲话：${JSON.stringify(ctx.ceo)}
-财报信息：${JSON.stringify(ctx.fin)}
-热点新闻：${JSON.stringify(ctx.news)}
+参考信息：${JSON.stringify(ctx)}
 
-公司列表：${store.competitors.join('、')}
-
-返回JSON数组，每条：
-{"comp":"公司名","hw":如果是华为数字能源则true否则false,"advantages":["优势1","优势2","优势3","优势4"],"strategy":"如何维持长期优势的策略(中文120字)","sources":[{"label":"来源","url":"链接","official":true}]}
-
-为每家公司提炼。`;
-  const raw = await askClaude(sys, prompt, false);
-  try {
-    let items = parseJSON(raw);
-    if (!Array.isArray(items)) items = items.results || items.data || [];
-    return items.filter(x => x && x.comp);
-  } catch (e) { console.error('genMoat parse', e); return []; }
+返回JSON数组，每条（字数严格限制）：
+{"comp":"公司名","hw":是否华为数字能源,"advantages":["优势1(20字内)","优势2(20字内)","优势3(20字内)"],"strategy":"维持优势策略(60字内)","sources":[{"label":"来源","url":"https://example.com","official":true}]}`;
+    const raw = await askClaude(sys, prompt, false);
+    try {
+      let items = parseJSON(raw);
+      if (!Array.isArray(items)) items = items.results || items.data || [];
+      allItems = allItems.concat(items.filter(x => x && x.comp));
+    } catch (e) { console.error('genMoat batch parse', e.message); }
+  }
+  return allItems;
 }
 
 // ─── 合并去重 ───
@@ -406,3 +441,4 @@ app.listen(PORT, () => {
   console.log(`   Resend: ${resend ? '✓' : '✗ 未配置'}`);
   console.log(`   定时: 每日北京06:00抓取 / 07:00邮件\n`);
 });
+
