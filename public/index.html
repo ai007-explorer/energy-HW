@@ -199,6 +199,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -230,6 +231,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex
     <div class="ni" onclick="gp('analyst',this)"><span class="ni-icon">📊</span>分析师观点<span class="ni-badge" id="b-ana">0</span></div>
     <div class="ni" onclick="gp('news',this)"><span class="ni-icon">🔥</span>热点新闻解读<span class="ni-badge green" id="b-news">0</span></div>
     <div class="ng">深度分析</div>
+    <div class="ni" onclick="gp('finanalysis',this)"><span class="ni-icon">📉</span>财务数据分析<span class="ni-badge gold">NEW</span></div>
     <div class="ni" onclick="gp('moat',this)"><span class="ni-icon">🏰</span>长期竞争优势<span class="ni-badge gold">深度</span></div>
     <div class="ng">推送订阅</div>
     <div class="ni" onclick="gp('subscribe',this)"><span class="ni-icon">📬</span>邮件订阅</div>
@@ -300,6 +302,97 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex
       </div>
       <div class="pills" id="moat-pills"></div>
       <div id="moat-feed"></div>
+    </div>
+
+    <!-- FINANCIAL ANALYSIS -->
+    <div class="page" id="page-finanalysis">
+      <div class="sh"><div><div class="sh-eye">Financial Intelligence</div><div class="sh-title">友商财务数据分析</div></div><div class="sh-meta" id="fin-analysis-meta">年报数据 · 自动抓取</div></div>
+
+      <!-- 控制栏 -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="pills" style="margin:0;" id="fin-year-pills">
+          <span class="pill on" onclick="setFinYear(this,'latest')">最新年报</span>
+          <span class="pill" onclick="setFinYear(this,'2024')">2024A</span>
+          <span class="pill" onclick="setFinYear(this,'2023')">2023A</span>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn btn-ghost" onclick="fetchFinancialAnalysis()" id="fin-fetch-btn">↺ 更新财务数据</button>
+        </div>
+      </div>
+
+      <!-- 财务概览表 -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="ch">
+          <div class="cht"><div class="cht-ico" style="background:var(--gold-dim);">📊</div>财务概览对比</div>
+          <div class="chr">
+            <span class="tag t-fin">年报数据</span>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:4px;">单位：亿元/亿美元</span>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="fin-tbl" id="fin-overview-table">
+            <thead>
+              <tr>
+                <th style="min-width:100px;">指标</th>
+                <th id="fin-th-0" style="min-width:110px;">—</th>
+                <th id="fin-th-1" style="min-width:110px;">—</th>
+                <th id="fin-th-2" style="min-width:110px;">—</th>
+                <th id="fin-th-3" style="min-width:110px;">—</th>
+                <th id="fin-th-4" style="min-width:110px;">—</th>
+              </tr>
+            </thead>
+            <tbody id="fin-overview-body">
+              <tr><td colspan="6" style="text-align:center;padding:32px;font-family:var(--mono);font-size:10px;color:var(--text3);">点击「更新财务数据」加载</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 图表区 -->
+      <div class="g2" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--green-dim);">📈</div>营收对比（亿）</div></div>
+          <div style="padding:16px;">
+            <canvas id="chart-revenue" height="220"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--blue-dim);">💹</div>毛利率对比（%）</div></div>
+          <div style="padding:16px;">
+            <canvas id="chart-margin" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:16px;">
+        <div class="card">
+          <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--purple-dim);">📊</div>净利润对比（亿）</div></div>
+          <div style="padding:16px;">
+            <canvas id="chart-netprofit" height="220"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--red-dim);">🔄</div>营收同比增速（%）</div></div>
+          <div style="padding:16px;">
+            <canvas id="chart-yoy" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 收入结构 -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--amber-dim);">🗂</div>收入结构（业务线）</div></div>
+        <div id="fin-segments-body" style="padding:6px 0;">
+          <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--text3);">加载后显示</div>
+        </div>
+      </div>
+
+      <!-- AI 财务洞察 -->
+      <div class="card">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--red-dim);">🧠</div>AI 财务洞察</div><div class="chr"><span class="tag t-hw">对华为启示</span></div></div>
+        <div id="fin-insights-body" style="padding:6px 0;">
+          <div style="padding:24px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--text3);">更新财务数据后自动生成</div>
+        </div>
+      </div>
     </div>
 
     <!-- SUBSCRIBE -->
@@ -612,16 +705,17 @@ function copyDigest(){
   navigator.clipboard.writeText(t).then(()=>showToast('✓ 简报已复制'));
 }
 
-const titles={ceo:'高管发言追踪',financial:'财报披露追踪',analyst:'分析师观点汇总',news:'热点新闻解读',moat:'长期竞争优势',subscribe:'邮件订阅'};
+const titles={ceo:'高管发言追踪',financial:'财报披露追踪',analyst:'分析师观点汇总',news:'热点新闻解读',moat:'长期竞争优势',subscribe:'邮件订阅',finanalysis:'财务数据分析'};
 function gp(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById('page-'+id).classList.add('on');
   document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
   if(el)el.classList.add('on');
-  document.getElementById('top-title').textContent=titles[id];
+  document.getElementById('top-title').textContent=titles[id]||id;
   if(id==='financial')renderFin();
   if(id==='moat'){renderMoatPills();renderMoat();}
   if(id==='subscribe'){renderSubs();renderDigest();}
+  if(id==='finanalysis')initFinAnalysis();
 }
 
 function openCeo(id){
@@ -653,9 +747,115 @@ function showToast(msg){
   toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
 }
 
+// ═══════════ FINANCIAL ANALYSIS ═══════════
+let finAnalysisData = [];
+const CHART_COLORS = ['#E8453C','#3B9EFF','#2ECC71','#E0A82E','#A855F7','#FF6B6B','#4ECDC4','#45B7D1','#96CEB4','#FFEAA7'];
+let finCharts = {};
+
+async function fetchFinancialAnalysis(){
+  const btn=document.getElementById('fin-fetch-btn');
+  if(!btn)return;
+  btn.disabled=true;btn.textContent='⟳ 抓取中…';
+  try{
+    const r=await fetch('/api/fetch-financial',{method:'POST',headers:{'x-admin-token':'US2026'}});
+    const d=await r.json();
+    if(d.ok){showToast('财务数据抓取已启动，约3-5分钟后完成');setTimeout(()=>loadFinData(),5*60*1000);}
+  }catch(e){showToast('启动失败');}
+  finally{btn.disabled=false;btn.textContent='↺ 更新财务数据';}
+}
+
+async function loadFinData(){
+  try{
+    const r=await fetch('/api/financial-data');
+    const d=await r.json();
+    if(d.data&&d.data.length>0){
+      finAnalysisData=d.data;
+      const m=document.getElementById('fin-analysis-meta');
+      if(m&&d.lastFetch)m.textContent='年报数据 · 更新于 '+new Date(d.lastFetch).toLocaleDateString('zh-CN');
+      renderFinAnalysis();
+    }
+  }catch(e){console.log('fin data not loaded',e.message);}
+}
+
+function initFinAnalysis(){
+  if(finAnalysisData.length>0)renderFinAnalysis();
+  else loadFinData();
+}
+
+function fmtPct(v){return v==null?'—':(v*100).toFixed(1)+'%';}
+function fmtNum(v,d=1){return v==null?'—':parseFloat(v).toFixed(d);}
+function yoyCol(v){return v==null?'var(--text2)':v>=0?'var(--green)':'var(--red)';}
+
+function renderFinAnalysis(){
+  const data=finAnalysisData;if(!data.length)return;
+  // 表头
+  for(let i=0;i<5;i++){
+    const th=document.getElementById('fin-th-'+i);if(!th)continue;
+    if(i<data.length){const d=data[i];th.innerHTML=`<div style="font-size:11px;font-weight:600;">${d.comp}</div><div style="font-family:var(--mono);font-size:9px;color:var(--text3);">${d.year||''}A · ${d.currency||'CNY'}</div>`;}
+    else th.textContent='';
+  }
+  // 表格行
+  const rows=[
+    {label:'营业收入',key:'revenue',fmt:v=>`<span style="font-weight:600;">${fmtNum(v)}</span>`},
+    {label:'收入同比 YOY',key:'revenue_yoy',fmt:v=>`<span style="color:${yoyCol(v)}">${fmtPct(v)}</span>`},
+    {label:'销售毛利',key:'gross_profit',fmt:v=>fmtNum(v)},
+    {label:'毛利率',key:'gross_margin',fmt:v=>`<span style="color:${v>0.3?'var(--green)':v>0.15?'var(--amber)':'var(--red)'}">${fmtPct(v)}</span>`},
+    {label:'营业利润',key:'op_profit',fmt:v=>fmtNum(v)},
+    {label:'营业利润率',key:'op_margin',fmt:v=>fmtPct(v)},
+    {label:'净利润',key:'net_profit',fmt:v=>fmtNum(v)},
+    {label:'净利率',key:'net_margin',fmt:v=>fmtPct(v)},
+  ];
+  const tbody=document.getElementById('fin-overview-body');
+  if(tbody)tbody.innerHTML=rows.map(row=>`<tr><td style="font-size:11px;color:var(--text2);font-weight:500;white-space:nowrap;">${row.label}</td>${data.slice(0,5).map(d=>`<td style="font-family:var(--mono);font-size:12px;text-align:right;padding:10px 14px;">${row.fmt(d[row.key])}</td>`).join('')}${'<td></td>'.repeat(Math.max(0,5-data.length))}</tr>`).join('');
+
+  renderFinCharts(data);
+  renderSegments(data);
+  renderFinInsights(data);
+}
+
+function renderFinCharts(data){
+  const labels=data.map(d=>d.comp);
+  const cols=data.map((_,i)=>CHART_COLORS[i%CHART_COLORS.length]);
+  Object.values(finCharts).forEach(c=>{try{c.destroy();}catch{}});
+  finCharts={};
+  const opts=(yLabel)=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#161C23',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#E6EDF5',bodyColor:'#8B9AAD',padding:10}},scales:{x:{ticks:{color:'#8B9AAD',font:{size:10}},grid:{color:'rgba(255,255,255,0.04)'}},y:{ticks:{color:'#8B9AAD',font:{size:10}},grid:{color:'rgba(255,255,255,0.06)'},title:{display:true,text:yLabel,color:'#4A5868',font:{size:10}}}}});
+  const mk=(id,yLabel,values,bgColors)=>{const ctx=document.getElementById(id);if(!ctx)return;finCharts[id]=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:values,backgroundColor:(bgColors||cols).map(c=>c+'CC'),borderColor:bgColors||cols,borderWidth:1,borderRadius:3}]},options:opts(yLabel)});};
+  mk('chart-revenue','营收（亿）',data.map(d=>d.revenue));
+  mk('chart-margin','毛利率（%）',data.map(d=>d.gross_margin!=null?+(d.gross_margin*100).toFixed(1):null));
+  mk('chart-netprofit','净利润（亿）',data.map(d=>d.net_profit));
+  mk('chart-yoy','营收同比（%）',data.map(d=>d.revenue_yoy!=null?+(d.revenue_yoy*100).toFixed(1):null),data.map(d=>d.revenue_yoy>=0?'#2ECC71':'#E8453C'));
+}
+
+function renderSegments(data){
+  const el=document.getElementById('fin-segments-body');if(!el)return;
+  const ws=data.filter(d=>d.segments&&d.segments.length>0);
+  if(!ws.length){el.innerHTML='<div style="padding:16px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--text3);">暂无业务线数据</div>';return;}
+  el.innerHTML=ws.map(d=>`<div style="padding:12px 16px;border-bottom:1px solid var(--border);"><div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:8px;">${d.comp} · ${d.year}A</div><div style="display:flex;flex-direction:column;gap:5px;">${(d.segments||[]).map((s,i)=>`<div style="display:flex;align-items:center;gap:10px;"><div style="font-size:11px;color:var(--text2);width:140px;flex-shrink:0;">${s.name}</div><div style="flex:1;background:var(--raised);border-radius:2px;height:6px;"><div style="width:${((s.pct||0)*100).toFixed(0)}%;background:${CHART_COLORS[i%CHART_COLORS.length]};height:100%;border-radius:2px;"></div></div><div style="font-family:var(--mono);font-size:10px;color:var(--text);width:40px;text-align:right;">${((s.pct||0)*100).toFixed(0)}%</div><div style="font-family:var(--mono);font-size:10px;color:var(--text2);width:60px;text-align:right;">${s.revenue?fmtNum(s.revenue)+'亿':'—'}</div></div>`).join('')}</div></div>`).join('');
+}
+
+function renderFinInsights(data){
+  const el=document.getElementById('fin-insights-body');if(!el)return;
+  const topRev=[...data].sort((a,b)=>(b.revenue||0)-(a.revenue||0))[0];
+  const topGrowth=[...data].filter(d=>d.revenue_yoy!=null).sort((a,b)=>b.revenue_yoy-a.revenue_yoy)[0];
+  const topMargin=[...data].filter(d=>d.gross_margin!=null).sort((a,b)=>b.gross_margin-a.gross_margin)[0];
+  const ins=[
+    topRev&&{icon:'🏆',title:'营收规模最大',text:`${topRev.comp}以${fmtNum(topRev.revenue)}亿${topRev.currency==='USD'?'美元':'元'}营收领跑，是数字能源赛道规模最大的玩家。华为数字能源需关注其规模效应带来的成本优势。`},
+    topGrowth&&{icon:'🚀',title:'增速最快友商',text:`${topGrowth.comp}营收同比增长${fmtPct(topGrowth.revenue_yoy)}，增速最高。高增速通常预示市场份额快速扩张，需重点关注其市场策略和增长驱动因素。`},
+    topMargin&&{icon:'💎',title:'盈利质量最强',text:`${topMargin.comp}毛利率达${fmtPct(topMargin.gross_margin)}，盈利质量最佳。高毛利通常反映较强的产品定价能力或技术壁垒，值得深入分析其护城河来源。`},
+    {icon:'📋',title:'数据说明',text:'财务数据来自各公司公开年报及东方财富、同花顺等公开数据源，仅供参考。华为数字能源作为非上市业务，数据可能不完整。建议结合公司官方披露核实。'}
+  ].filter(Boolean);
+  el.innerHTML=ins.map(i=>`<div style="display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);"><span style="font-size:18px;flex-shrink:0;">${i.icon}</span><div><div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px;">${i.title}</div><div style="font-size:12px;color:var(--text2);line-height:1.7;">${i.text}</div></div></div>`).join('');
+}
+
+function setFinYear(el,year){
+  document.querySelectorAll('#fin-year-pills .pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  const filtered=year==='latest'?finAnalysisData:finAnalysisData.filter(d=>d.year===year);
+  if(filtered.length){const tmp=finAnalysisData;finAnalysisData=filtered;renderFinAnalysis();finAnalysisData=tmp;}
+}
+
 // ═══════════ INIT ═══════════
 loadData();
-// 每5分钟自动刷新一次数据
 setInterval(loadData, 5*60*1000);
 </script>
 </body>
