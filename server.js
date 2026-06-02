@@ -43,7 +43,9 @@ function loadStore() {
     ],
     subscribers: [],
     ceo: [], financial: [], analyst: [], news: [], moat: [],
-    lastFetch: null
+    finData: [],        // 财务对比数据
+    lastFetch: null,
+    lastFinFetch: null
   };
 }
 function saveStore(s) {
@@ -435,10 +437,109 @@ app.get('/api/health', (req, res) => res.json({
   lastFetch: store.lastFetch
 }));
 
+// ═══════════════════════════════════════════════════════
+// 财务数据抓取
+// ═══════════════════════════════════════════════════════
+async function fetchFinancialData() {
+  // 上市公司分批抓取，每批4家
+  const listed = ['阳光电源','德业股份','锦浪科技','汇川技术','科华数据','科士达','盛弘股份','宁德时代','特斯拉','特锐德'];
+  const batchSize = 4;
+  let allData = [];
+
+  for (let i = 0; i < listed.length; i += batchSize) {
+    const batch = listed.slice(i, i + batchSize);
+    const sys = `你是专业财务分析师。从东方财富、同花顺、巨潮资讯、Yahoo Finance、SEC等公开来源搜索这些公司最新年报财务数据。仅回复JSON数组，字段严格按要求，数值用数字不用字符串。`;
+    const prompt = `搜索以下公司最新年度财务数据（优先2025年年报，若未发布则用2024年）：${batch.join('、')}
+
+数据来源优先：东方财富(eastmoney.com)、同花顺(10jqka.com)、巨潮资讯(cninfo.com.cn)、Yahoo Finance、SEC EDGAR
+
+返回JSON数组，每条：
+{
+  "comp": "公司名",
+  "ticker": "股票代码如300274.SZ或TSLA",
+  "year": "2025或2024",
+  "currency": "CNY或USD",
+  "revenue": 营收数值(亿元或亿美元,数字),
+  "revenue_yoy": 同比增速如0.18代表18%,
+  "gross_profit": 毛利润(亿),
+  "gross_margin": 毛利率如0.32代表32%,
+  "op_profit": 营业利润(亿),
+  "op_margin": 营业利润率,
+  "net_profit": 净利润(亿),
+  "net_margin": 净利率,
+  "revenue_yoy_prev": 上年同比增速(用于对比),
+  "segments": [{"name":"业务线名称","revenue":收入,"pct":占比如0.35}],
+  "regions": [{"name":"区域","revenue":收入,"pct":占比}],
+  "source_url": "数据来源链接",
+  "source_name": "来源名称"
+}
+
+若某字段无法获取填null。只返回能找到真实数据的公司。`;
+
+    const raw = await askClaude(sys, prompt, true);
+    try {
+      let items = parseJSON(raw);
+      if (!Array.isArray(items)) items = items.data || items.results || [];
+      allData = allData.concat(items.filter(x => x && x.comp && x.revenue));
+    } catch(e) { console.error('fetchFin batch parse', e.message); }
+  }
+
+  // 华为数字能源单独处理（非上市，数据有限）
+  try {
+    const hwRaw = await askClaude(
+      '你是专业财务分析师。搜索华为数字能源的公开财务披露信息。仅回复JSON。',
+      `搜索华为数字能源（Huawei Digital Power）最新年度营收和业务数据。
+来源：华为年报(huawei.com/annual-report)、新闻披露、分析师报告。
+返回单个JSON对象，字段同上，能找到什么填什么，找不到填null。`, true);
+    const hw = parseJSON(hwRaw);
+    if (hw && (hw.comp || hw.revenue)) {
+      if (!hw.comp) hw.comp = '华为数字能源';
+      allData.unshift(hw);
+    }
+  } catch(e) { console.error('fetchFin HW parse', e.message); }
+
+  return allData;
+}
+
+// 每周日北京时间06:00更新财务数据（UTC周六22:00）
+cron.schedule('0 22 * * 6', async () => {
+  console.log('[CRON] 财务数据更新触发');
+  try {
+    const data = await fetchFinancialData();
+    if (data.length > 0) {
+      store.finData = data;
+      store.lastFinFetch = new Date().toISOString();
+      saveStore(store);
+      console.log(`[FIN] 更新完成: ${data.length} 家公司`);
+    }
+  } catch(e) { console.error('[FIN] 更新失败', e); }
+});
+
+// ─── 财务数据 API ───
+app.get('/api/financial-data', (req, res) => {
+  res.json({
+    data: store.finData || [],
+    lastFetch: store.lastFinFetch
+  });
+});
+
+app.post('/api/fetch-financial', async (req, res) => {
+  if (req.headers['x-admin-token'] !== ADMIN_TOKEN)
+    return res.status(403).json({ ok: false, msg: '无权限' });
+  res.json({ ok: true, msg: '财务数据抓取已启动，约3-5分钟后完成' });
+  fetchFinancialData().then(data => {
+    if (data.length > 0) {
+      store.finData = data;
+      store.lastFinFetch = new Date().toISOString();
+      saveStore(store);
+      console.log(`[FIN] 手动更新完成: ${data.length} 家`);
+    }
+  }).catch(e => console.error('[FIN] 手动更新失败', e));
+});
+
 app.listen(PORT, () => {
   console.log(`\n🚀 数字能源竞情平台运行中 :${PORT}`);
   console.log(`   Anthropic: ${anthropic ? '✓' : '✗ 未配置'}`);
   console.log(`   Resend: ${resend ? '✓' : '✗ 未配置'}`);
   console.log(`   定时: 每日北京06:00抓取 / 07:00邮件\n`);
 });
-
