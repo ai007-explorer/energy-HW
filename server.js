@@ -43,7 +43,9 @@ function loadStore() {
     ],
     subscribers: [],
     ceo: [], financial: [], analyst: [], news: [], moat: [],
-    finData: [],        // 财务对比数据
+    finData: [],
+    inferences: [],     // 推演历史记录
+    pendingSignals: [], // 待确认的高影响信号
     lastFetch: null,
     lastFinFetch: null
   };
@@ -139,21 +141,84 @@ function parseJSON(text) {
 // ═══════════════════════════════════════════════════════
 // 抓取任务：四个模块
 // ═══════════════════════════════════════════════════════
+
+// 内置 CEO/高管名单（精准搜索用）
+const CEO_MAP = {
+  '宁德时代':   [{ name:'曾毓群', title:'董事长', en:'Zeng Yuqun', ticker:'300750' }],
+  '阳光电源':   [{ name:'曹仁贤', title:'董事长', en:'Cao Renxian', ticker:'300274' }],
+  '德业股份':   [{ name:'张和君', title:'董事长', en:'Zhang Hejun', ticker:'605117' }],
+  '锦浪科技':   [{ name:'王一鸣', title:'创始人/总经理', en:'Wang Yiming', ticker:'300763' }],
+  '汇川技术':   [{ name:'朱兴明', title:'董事长', en:'Zhu Xingming', ticker:'300124' }],
+  '科华数据':   [{ name:'陈成辉', title:'董事长', en:'Chen Chenghui', ticker:'002335' }],
+  '科士达':     [{ name:'廖创鑫', title:'董事长', en:'Liao Chuangxin', ticker:'002518' }],
+  '盛弘股份':   [{ name:'肖胜文', title:'董事长', en:'Xiao Shengwen', ticker:'300693' }],
+  '特斯拉':     [{ name:'Elon Musk', title:'CEO', en:'Elon Musk', ticker:'TSLA' }],
+  '特锐德':     [{ name:'于德翔', title:'董事长', en:'Yu Dexiang', ticker:'300001' }],
+  '思格新能源': [{ name:'张明', title:'CEO', en:'Zhang Ming SIGENERGY', ticker:'' }],
+  '华为数字能源':[{ name:'侯金龙', title:'总裁', en:'Hou Jinlong Huawei Digital Power', ticker:'' }],
+  '维谛技术':   [{ name:'Franz Wunschek', title:'CEO Vertiv', en:'Giordano Albertazzi Vertiv CEO', ticker:'VRT' }],
+  '伊顿':       [{ name:'Craig Arnold', title:'CEO Eaton', en:'Craig Arnold Eaton CEO', ticker:'ETN' }],
+};
+
 async function fetchCEO() {
-  const comps = store.competitors.join('、');
-  const sys = `你是数字能源行业的竞争情报分析师。只收集这些公司的董事长/CEO/创始人本人在过去7天的公开发言。只要本人直接说的话，不要二手转述或他人评论。所有信息必须附准确来源链接，优先官方来源。仅回复JSON数组。`;
-  const prompt = `搜索以下数字能源公司的最高领导人（董事长/CEO/创始人）在过去7天内的公开发言：${comps}
+  const allItems = [];
+  // 按人名逐一精准搜索，每批3人，避免混淆
+  const entries = Object.entries(CEO_MAP).filter(([comp]) => store.competitors.includes(comp));
+  const batchSize = 3;
+
+  for (let i = 0; i < entries.length; i += batchSize) {
+    const batch = entries.slice(i, i + batchSize);
+    const searchTargets = batch.map(([comp, persons]) =>
+      persons.map(p => `【${comp}】${p.name}（${p.en}）`).join('、')
+    ).join('；');
+
+    const today = new Date().toISOString().slice(0, 10);
+    const weekAgo = new Date(Date.now() - 7*864e5).toISOString().slice(0, 10);
+
+    const sys = `你是数字能源行业竞争情报分析师。精准搜索指定人物的公开发言，只收录本人亲口说的话。排除二手报道、分析师解读、他人对其评论。仅回复JSON数组。`;
+    const prompt = `精准搜索以下人物在 ${weekAgo} 至 ${today} 期间的公开发言：
+${searchTargets}
+
+搜索范围：
+- 微博、微信公众号、抖音等社交媒体（本人官方账号）
+- 公司官网新闻、投资者关系页面
+- 财经媒体采访（第一财经、财新、36氪、彭博、路透）
+- 证券交易所业绩说明会记录
+- 行业会议、论坛演讲（SNEC、CIBF、ESIE等）
+- Twitter/X（英文高管）
+
+每个人物单独搜索，搜索格式："[人名] 发言 OR 采访 OR 演讲 site:weibo.com OR site:36kr.com" 等。
 
 返回JSON数组，每条：
-{"id":"唯一id","comp":"公司名","person":"姓名 职位","date":"YYYY-MM-DD","title":"标题","summary":"发言总结(中文100字)","quote":"核心观点原文","sources":[{"label":"来源名","url":"链接","official":true或false}]}
+{
+  "id": "comp_personname_YYYYMMDD",
+  "comp": "公司名",
+  "person": "姓名 · 职位",
+  "date": "YYYY-MM-DD",
+  "title": "发言标题或场合(30字内)",
+  "summary": "发言核心内容总结(80字，中文)",
+  "quote": "最重要的一句原话（尽量保留原文）",
+  "key_topics": ["话题1","话题2"],
+  "sources": [{"label":"来源名称","url":"真实链接","official":true或false}]
+}
 
-只返回过去7天内的真实发言，找不到就返回[]。务必附真实来源链接。`;
-  const raw = await askClaude(sys, prompt, true);
-  try {
-    let items = parseJSON(raw);
-    if (!Array.isArray(items)) items = items.results || items.data || [];
-    return items.filter(x => x && x.title);
-  } catch (e) { console.error('fetchCEO parse', e); return []; }
+注意：
+1. 每条必须有真实来源链接
+2. quote 字段必须是本人原话，不能是记者转述
+3. 找不到真实发言就返回[]，不要编造`;
+
+    const raw = await askClaude(sys, prompt, true);
+    try {
+      let items = parseJSON(raw);
+      if (!Array.isArray(items)) items = items.results || items.data || [];
+      const valid = items.filter(x => x && x.title && x.comp && x.quote);
+      allItems.push(...valid);
+      console.log(`[CEO] 批次${Math.floor(i/batchSize)+1}: 找到 ${valid.length} 条发言`);
+    } catch(e) {
+      console.error(`[CEO] 批次${Math.floor(i/batchSize)+1} 解析失败:`, e.message);
+    }
+  }
+  return allItems;
 }
 
 async function fetchFinancial() {
@@ -261,6 +326,9 @@ async function runFullFetch() {
     store.news      = mergeItems(store.news, news);
     // moat 基于以上结果生成
     store.moat = await generateMoat();
+    // 扫描高影响信号
+    const allNew = [...ceo, ...news];
+    if (allNew.length > 0) await scanForSignals(allNew);
     prune();
     store.lastFetch = new Date().toISOString();
     saveStore(store);
@@ -535,6 +603,219 @@ app.post('/api/fetch-financial', async (req, res) => {
       console.log(`[FIN] 手动更新完成: ${data.length} 家`);
     }
   }).catch(e => console.error('[FIN] 手动更新失败', e));
+});
+
+// ═══════════════════════════════════════════════════════
+// 推演引擎
+// ═══════════════════════════════════════════════════════
+
+// 华为数字能源基准财务假设（内部规划参考值，可调整）
+const HW_BASE = {
+  revenue: { solar: 450, storage: 380, datacenter: 270, total: 1100 }, // 亿元
+  margin:  { solar: 0.32, storage: 0.28, datacenter: 0.35 },
+  netMargin: 0.18
+};
+
+// 每次完整抓取后，自动扫描高影响信号
+async function scanForSignals(newItems) {
+  if (!newItems || newItems.length === 0) return;
+  const sys = `你是华为数字能源的战略分析师。判断每条竞情信息是否会对华为数字能源的光伏、储能、数据中心能源三条业务线产生重大影响。仅回复JSON数组。`;
+  const prompt = `分析以下竞情信息，识别对华为数字能源有重大财务影响的事件（影响评分>=7分才标记）：
+
+${newItems.map(i=>`- [${i.comp||''}] ${i.title||i.summary||''}`).join('\n')}
+
+返回JSON数组，只包含高影响事件：
+[{
+  "source_title": "原始信息标题",
+  "source_comp": "来源公司",
+  "impact_score": 1-10分,
+  "affected_segments": ["solar"|"storage"|"datacenter"],
+  "impact_direction": "positive"|"negative"|"mixed",
+  "impact_summary": "一句话说明影响路径(40字内)",
+  "trigger_inference": true
+}]
+
+若无高影响事件返回[]。`;
+
+  try {
+    const raw = await askClaude(sys, prompt, false);
+    const signals = parseJSON(raw);
+    if (Array.isArray(signals) && signals.length > 0) {
+      store.pendingSignals = [
+        ...signals.map(s => ({ ...s, id: Date.now() + Math.random(), createdAt: new Date().toISOString(), status: 'pending' })),
+        ...(store.pendingSignals || [])
+      ].slice(0, 20);
+      saveStore(store);
+      console.log(`[SIGNAL] 识别到 ${signals.length} 个高影响信号`);
+    }
+  } catch(e) { console.error('[SIGNAL] 扫描失败', e.message); }
+}
+
+// 执行推演：生成三种情景
+async function runInference(signal, triggeredBy = 'manual') {
+  const sys = `你是华为数字能源的首席财务规划分析师，擅长情景推演和财务建模。基于竞争情报事件，推演对华为数字能源三条业务线的财务影响。严格按JSON格式回复，数值要有财务逻辑支撑。`;
+
+  const baseInfo = `华为数字能源基准假设（内部规划参考）：
+- 光伏业务（solar）：营收 ${HW_BASE.revenue.solar}亿，毛利率 ${(HW_BASE.margin.solar*100).toFixed(0)}%
+- 储能业务（storage）：营收 ${HW_BASE.revenue.storage}亿，毛利率 ${(HW_BASE.margin.storage*100).toFixed(0)}%
+- 数据中心能源（datacenter）：营收 ${HW_BASE.revenue.datacenter}亿，毛利率 ${(HW_BASE.margin.datacenter*100).toFixed(0)}%
+- 整体净利率：${(HW_BASE.netMargin*100).toFixed(0)}%`;
+
+  const prompt = `触发事件：【${signal.source_comp}】${signal.source_title}
+影响方向：${signal.impact_direction}，主要影响业务线：${(signal.affected_segments||[]).join('、')}
+影响路径：${signal.impact_summary}
+
+${baseInfo}
+
+历史推演参考：${store.inferences.slice(0,3).map(i=>`${i.event_title}→${i.scenarios?.base?.revenue_delta_pct}%营收影响`).join('; ')||'暂无'}
+
+请生成三种情景的财务推演，返回JSON：
+{
+  "event_title": "事件标题(20字内)",
+  "event_summary": "事件背景和影响路径分析(100字)",
+  "causal_chain": ["因果链第1步","第2步","第3步","第4步"],
+  "scenarios": {
+    "optimistic": {
+      "label": "乐观",
+      "assumption": "关键假设(30字)",
+      "probability": 0.25,
+      "segments": {
+        "solar":       {"revenue_delta": 数值亿元正负, "revenue_delta_pct": 百分比如0.05, "margin_delta": 毛利率变化如-0.01},
+        "storage":     {"revenue_delta": 数值, "revenue_delta_pct": 百分比, "margin_delta": 变化},
+        "datacenter":  {"revenue_delta": 数值, "revenue_delta_pct": 百分比, "margin_delta": 变化}
+      },
+      "total_revenue_delta": 总营收变化亿元,
+      "total_revenue_delta_pct": 总营收变化百分比,
+      "net_profit_delta": 净利润变化亿元,
+      "key_risk": "主要风险(20字)",
+      "strategic_response": "华为应对策略(40字)"
+    },
+    "base": { /* 同上结构，基准情景概率0.5 */ },
+    "pessimistic": { /* 同上结构，悲观情景概率0.25 */ }
+  },
+  "weighted_revenue_impact": 加权平均营收影响亿元,
+  "weighted_profit_impact": 加权平均净利润影响亿元,
+  "time_horizon": "影响时间窗口如'6-12个月'",
+  "confidence": "high|medium|low",
+  "recommendation": "给CFO的一句话建议(50字内)"
+}`;
+
+  const raw = await askClaude(sys, prompt, false);
+  const result = parseJSON(raw);
+  result.id = Date.now().toString();
+  result.triggered_by = triggeredBy;
+  result.signal_id = signal.id;
+  result.createdAt = new Date().toISOString();
+  result.source_comp = signal.source_comp;
+  return result;
+}
+
+// ─── 推演 API 路由 ───
+
+// 获取待确认信号列表
+app.get('/api/signals', (req, res) => {
+  res.json({ signals: store.pendingSignals || [] });
+});
+
+// 手动添加自定义信号
+app.post('/api/signals/add', async (req, res) => {
+  const { title, comp, segments, direction, summary } = req.body;
+  if (!title) return res.status(400).json({ ok: false, msg: '缺少标题' });
+  const signal = {
+    id: Date.now().toString(),
+    source_title: title,
+    source_comp: comp || '自定义',
+    affected_segments: segments || ['solar','storage','datacenter'],
+    impact_direction: direction || 'mixed',
+    impact_summary: summary || title,
+    impact_score: 8,
+    trigger_inference: true,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  store.pendingSignals = [signal, ...(store.pendingSignals||[])].slice(0, 20);
+  saveStore(store);
+  res.json({ ok: true, signal });
+});
+
+// 确认信号并执行推演
+app.post('/api/inference/run', async (req, res) => {
+  if (req.headers['x-admin-token'] !== ADMIN_TOKEN)
+    return res.status(403).json({ ok: false, msg: '无权限' });
+  const { signal_id, custom_signal } = req.body;
+
+  let signal = custom_signal;
+  if (!signal && signal_id) {
+    signal = (store.pendingSignals || []).find(s => s.id == signal_id);
+  }
+  if (!signal) return res.status(404).json({ ok: false, msg: '信号不存在' });
+
+  res.json({ ok: true, msg: '推演已启动，约1-2分钟后完成' });
+
+  try {
+    const result = await runInference(signal, 'manual');
+    store.inferences = [result, ...(store.inferences||[])].slice(0, 50);
+    // 标记信号已处理
+    store.pendingSignals = (store.pendingSignals||[]).map(s =>
+      s.id == signal_id ? { ...s, status: 'processed', inference_id: result.id } : s
+    );
+    saveStore(store);
+    console.log(`[INFERENCE] 推演完成: ${result.event_title}`);
+  } catch(e) {
+    console.error('[INFERENCE] 推演失败', e.message);
+  }
+});
+
+// 获取推演历史
+app.get('/api/inferences', (req, res) => {
+  res.json({ inferences: store.inferences || [], total: (store.inferences||[]).length });
+});
+
+// 获取单条推演详情
+app.get('/api/inferences/:id', (req, res) => {
+  const item = (store.inferences||[]).find(i => i.id === req.params.id);
+  if (!item) return res.status(404).json({ ok: false, msg: '不存在' });
+  res.json(item);
+});
+
+// 删除推演记录
+app.delete('/api/inferences/:id', (req, res) => {
+  if (req.headers['x-admin-token'] !== ADMIN_TOKEN)
+    return res.status(403).json({ ok: false, msg: '无权限' });
+  store.inferences = (store.inferences||[]).filter(i => i.id !== req.params.id);
+  saveStore(store);
+  res.json({ ok: true });
+});
+
+// 获取基准假设（可调整）
+app.get('/api/base-assumption', (req, res) => {
+  res.json(store.baseAssumption || HW_BASE);
+});
+
+app.post('/api/base-assumption', (req, res) => {
+  if (req.headers['x-admin-token'] !== ADMIN_TOKEN)
+    return res.status(403).json({ ok: false, msg: '无权限' });
+  store.baseAssumption = { ...HW_BASE, ...req.body };
+  saveStore(store);
+  res.json({ ok: true, data: store.baseAssumption });
+});
+
+// 同步全量数据接口（含信号和推演）
+const origDataHandler = app._router.stack.find(r => r.route?.path === '/api/data');
+app.get('/api/data-full', (req, res) => {
+  res.json({
+    competitors: store.competitors,
+    ceo: store.ceo,
+    financial: store.financial,
+    analyst: store.analyst,
+    news: store.news,
+    moat: store.moat,
+    finData: store.finData || [],
+    pendingSignals: (store.pendingSignals||[]).filter(s=>s.status==='pending'),
+    inferences: (store.inferences||[]).slice(0,10),
+    subscriberCount: store.subscribers.length,
+    lastFetch: store.lastFetch
+  });
 });
 
 app.listen(PORT, () => {
