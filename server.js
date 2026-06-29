@@ -222,20 +222,74 @@ ${searchTargets}
 }
 
 async function fetchFinancial() {
-  const comps = store.competitors.join('、');
-  const sys = `你是财务分析师。收集这些公司过去30天内新披露的财报或业绩公告。所有数据必须附官方来源（公司IR页面、交易所公告）。仅回复JSON数组。`;
-  const prompt = `搜索以下公司过去30天内新披露的财报/业绩快报：${comps}
+  // 上市公司股票代码映射，用于精准搜索
+  const LISTED_COMPS = [
+    { comp:'阳光电源',  ticker:'300274.SZ', exchange:'深交所', name_en:'Sungrow' },
+    { comp:'德业股份',  ticker:'605117.SH', exchange:'上交所', name_en:'Deye' },
+    { comp:'锦浪科技',  ticker:'300763.SZ', exchange:'深交所', name_en:'Ginlong' },
+    { comp:'汇川技术',  ticker:'300124.SZ', exchange:'深交所', name_en:'Inovance' },
+    { comp:'科华数据',  ticker:'002335.SZ', exchange:'深交所', name_en:'Kehua' },
+    { comp:'科士达',    ticker:'002518.SZ', exchange:'深交所', name_en:'KSTAR' },
+    { comp:'盛弘股份',  ticker:'300693.SZ', exchange:'深交所', name_en:'Shenghong' },
+    { comp:'宁德时代',  ticker:'300750.SZ', exchange:'深交所', name_en:'CATL' },
+    { comp:'特锐德',    ticker:'300001.SZ', exchange:'深交所', name_en:'Teride' },
+    { comp:'特斯拉',    ticker:'TSLA',      exchange:'NASDAQ', name_en:'Tesla' },
+  ];
+
+  // 只处理在追踪列表里的公司
+  const targets = LISTED_COMPS.filter(c => store.competitors.includes(c.comp));
+  const allItems = [];
+  const batchSize = 3;
+
+  for (let i = 0; i < targets.length; i += batchSize) {
+    const batch = targets.slice(i, i + batchSize);
+    const today = new Date().toISOString().slice(0, 10);
+    const monthAgo = new Date(Date.now() - 30*864e5).toISOString().slice(0, 10);
+
+    const sys = `你是专业财务分析师。精准搜索上市公司的官方财务披露公告，只收录来自交易所公告、公司IR官网的真实数据。仅回复JSON数组。`;
+
+    const prompt = `搜索以下公司在 ${monthAgo} 至 ${today} 期间发布的财报、业绩预告、业绩快报或年报：
+
+${batch.map(c => `- ${c.comp}（股票代码：${c.ticker}，${c.exchange}）`).join('\n')}
+
+搜索方式：
+1. A股公司：直接搜索 "[公司名] 业绩快报 OR 年报 OR 季报 site:cninfo.com.cn" 或 "[股票代码] 财报"
+2. 特斯拉：搜索 "Tesla earnings report 2026 site:ir.tesla.com" 或 "TSLA Q1 2026 results"
+3. 同时搜索东方财富(eastmoney.com)、同花顺(10jqka.com.cn)的财报页面
 
 返回JSON数组，每条：
-{"id":"唯一id","comp":"公司名","period":"报告期如2026 Q1","rev":"营收","yoy":"同比","profit":"净利润","date":"披露日期YYYY-MM-DD","summary":"财报要点(中文80字)","source":"官方来源链接","official":true}
+{
+  "id": "comp_period_唯一标识",
+  "comp": "公司名",
+  "ticker": "股票代码",
+  "period": "报告期，如2026Q1或2025年报",
+  "rev": "营收，含单位如'891.8亿元'",
+  "yoy": "同比增速如'+14.5%'",
+  "profit": "净利润，含单位",
+  "gross_margin": "毛利率如'31.8%'（若有披露）",
+  "date": "披露日期YYYY-MM-DD",
+  "summary": "财报核心亮点（80字，中文）",
+  "source": "官方来源URL（交易所公告页或IR页面）",
+  "official": true
+}
 
-只返回真实披露的财报，找不到返回[]。`;
-  const raw = await askClaude(sys, prompt, true);
-  try {
-    let items = parseJSON(raw);
-    if (!Array.isArray(items)) items = items.results || items.data || [];
-    return items.filter(x => x && x.comp);
-  } catch (e) { console.error('fetchFin parse', e); return []; }
+注意：
+1. 只返回真实已披露的财报，不要预测或估算
+2. source 必须是真实可访问的链接
+3. 找不到就返回[]`;
+
+    const raw = await askClaude(sys, prompt, true);
+    try {
+      let items = parseJSON(raw);
+      if (!Array.isArray(items)) items = items.results || items.data || [];
+      const valid = items.filter(x => x && x.comp && x.period && x.rev);
+      allItems.push(...valid);
+      console.log(`[FIN] 批次${Math.floor(i/batchSize)+1}: 找到 ${valid.length} 条财报`);
+    } catch(e) {
+      console.error(`[FIN] 批次${Math.floor(i/batchSize)+1} 解析失败:`, e.message);
+    }
+  }
+  return allItems;
 }
 
 async function fetchAnalyst() {
