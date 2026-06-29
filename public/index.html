@@ -232,6 +232,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex
     <div class="ni" onclick="gp('news',this)"><span class="ni-icon">🔥</span>热点新闻解读<span class="ni-badge green" id="b-news">0</span></div>
     <div class="ng">深度分析</div>
     <div class="ni" onclick="gp('finanalysis',this)"><span class="ni-icon">📉</span>财务数据分析<span class="ni-badge gold">NEW</span></div>
+    <div class="ni" onclick="gp('inference',this)"><span class="ni-icon">🔮</span>影响推演<span class="ni-badge red" id="b-signals">0</span></div>
     <div class="ni" onclick="gp('moat',this)"><span class="ni-icon">🏰</span>长期竞争优势<span class="ni-badge gold">深度</span></div>
     <div class="ng">推送订阅</div>
     <div class="ni" onclick="gp('subscribe',this)"><span class="ni-icon">📬</span>邮件订阅</div>
@@ -394,6 +395,79 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex
         </div>
       </div>
     </div>
+
+    <!-- INFERENCE PAGE -->
+    <div class="page" id="page-inference">
+      <div class="sh"><div><div class="sh-eye">Impact Inference Engine</div><div class="sh-title">竞情影响推演</div></div><div class="sh-meta">信号识别 → 因果链分析 → 三情景财务推演</div></div>
+
+      <!-- 待确认信号 -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="ch">
+          <div class="cht"><div class="cht-ico" style="background:var(--red-dim);">⚡</div>待确认高影响信号</div>
+          <div class="chr">
+            <span class="tag t-hw" id="signal-count-tag">0 个</span>
+            <button class="btn btn-ghost" onclick="loadSignals()" style="font-size:10px;padding:4px 10px;">刷新</button>
+          </div>
+        </div>
+        <div id="signals-list">
+          <div class="empty"><div class="empty-i">⚡</div><div class="empty-t">暂无待确认信号</div><div class="empty-s">每次抓取后自动识别高影响事件</div></div>
+        </div>
+      </div>
+
+      <!-- 自定义推演 -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--blue-dim);">✏️</div>手动输入推演事件</div></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px;">事件描述</div>
+              <input type="text" id="custom-title" placeholder="如：宁德时代与国家电网签署5GWh战略协议"
+                style="width:100%;background:var(--raised);border:1px solid var(--border2);border-radius:4px;padding:8px 11px;font-size:12px;color:var(--text);outline:none;font-family:var(--sans);">
+            </div>
+            <div>
+              <div style="font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px;">来源公司</div>
+              <input type="text" id="custom-comp" placeholder="如：宁德时代"
+                style="width:100%;background:var(--raised);border:1px solid var(--border2);border-radius:4px;padding:8px 11px;font-size:12px;color:var(--text);outline:none;font-family:var(--sans);">
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--text2);letter-spacing:0.1em;">影响业务线：</div>
+            <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="seg-solar" checked style="accent-color:var(--red2);"> 光伏</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="seg-storage" checked style="accent-color:var(--red2);"> 储能</label>
+            <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text2);cursor:pointer;"><input type="checkbox" id="seg-datacenter" checked style="accent-color:var(--red2);"> 数据中心能源</label>
+            <div style="margin-left:auto;display:flex;gap:6px;">
+              <select id="custom-direction" style="background:var(--raised);border:1px solid var(--border2);border-radius:4px;padding:6px 10px;font-size:11px;color:var(--text);outline:none;">
+                <option value="negative">负面影响</option>
+                <option value="positive">正面影响</option>
+                <option value="mixed">双面影响</option>
+              </select>
+              <button class="btn btn-red" onclick="runCustomInference()" id="custom-run-btn">🔮 发起推演</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 推演历史 -->
+      <div class="card">
+        <div class="ch">
+          <div class="cht"><div class="cht-ico" style="background:var(--purple-dim);">📋</div>推演结果</div>
+          <div class="chr">
+            <span class="tag" style="background:var(--amber-dim);color:var(--amber);" id="draft-count-tag">草稿 0</span>
+            <span class="tag t-news" id="pub-count-tag">已发布 0</span>
+          </div>
+        </div>
+        <div class="pills" style="margin:0;padding:12px 16px 0;">
+          <span class="pill on" onclick="setInfFilter(this,'draft')">⏳ 待确认草稿</span>
+          <span class="pill" onclick="setInfFilter(this,'published')">✓ 已发布</span>
+          <span class="pill" onclick="setInfFilter(this,'all')">全部</span>
+        </div>
+        <div id="inference-list">
+          <div class="empty"><div class="empty-i">🔮</div><div class="empty-t">暂无推演记录</div><div class="empty-s">确认信号或手动输入事件后开始推演</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INFERENCE DETAIL MODAL content rendered in existing modal -->
 
     <!-- SUBSCRIBE -->
     <div class="page" id="page-subscribe">
@@ -705,7 +779,7 @@ function copyDigest(){
   navigator.clipboard.writeText(t).then(()=>showToast('✓ 简报已复制'));
 }
 
-const titles={ceo:'高管发言追踪',financial:'财报披露追踪',analyst:'分析师观点汇总',news:'热点新闻解读',moat:'长期竞争优势',subscribe:'邮件订阅',finanalysis:'财务数据分析'};
+const titles={ceo:'高管发言追踪',financial:'财报披露追踪',analyst:'分析师观点汇总',news:'热点新闻解读',moat:'长期竞争优势',subscribe:'邮件订阅',finanalysis:'财务数据分析',inference:'竞情影响推演'};
 function gp(id,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
   document.getElementById('page-'+id).classList.add('on');
@@ -716,6 +790,7 @@ function gp(id,el){
   if(id==='moat'){renderMoatPills();renderMoat();}
   if(id==='subscribe'){renderSubs();renderDigest();}
   if(id==='finanalysis')initFinAnalysis();
+  if(id==='inference'){loadSignals();loadInferences();}
 }
 
 function openCeo(id){
@@ -782,8 +857,8 @@ function initFinAnalysis(){
   else loadFinData();
 }
 
-function fmtPct(v){return v==null?'—':(v*100).toFixed(1)+'%';}
-function fmtNum(v,d=1){return v==null?'—':parseFloat(v).toFixed(d);}
+function fmtPct(v){if(v==null||isNaN(v))return'—';return(v*100).toFixed(1)+'%';}
+function fmtNum(v,d=1){if(v==null||isNaN(v))return'—';return parseFloat(v).toFixed(d);}
 function yoyCol(v){return v==null?'var(--text2)':v>=0?'var(--green)':'var(--red)';}
 
 function renderFinAnalysis(){
@@ -852,6 +927,224 @@ function setFinYear(el,year){
   el.classList.add('on');
   const filtered=year==='latest'?finAnalysisData:finAnalysisData.filter(d=>d.year===year);
   if(filtered.length){const tmp=finAnalysisData;finAnalysisData=filtered;renderFinAnalysis();finAnalysisData=tmp;}
+}
+
+// ═══════════ INFERENCE ENGINE ═══════════
+const SEG_LABELS = { solar:'光伏', storage:'储能', datacenter:'数据中心能源' };
+const SEG_COLORS = { solar:'var(--gold)', storage:'var(--blue)', datacenter:'var(--green)' };
+
+async function loadSignals(){
+  try{
+    const r=await fetch('/api/signals');
+    const d=await r.json();
+    const pending=(d.signals||[]).filter(s=>s.status==='pending');
+    document.getElementById('b-signals').textContent=pending.length||'0';
+    document.getElementById('signal-count-tag').textContent=pending.length+' 个';
+    const el=document.getElementById('signals-list');
+    if(!pending.length){
+      el.innerHTML='<div class="empty"><div class="empty-i">⚡</div><div class="empty-t">暂无待确认信号</div><div class="empty-s">每次抓取后自动识别高影响事件</div></div>';
+      return;
+    }
+    el.innerHTML=pending.map(s=>`
+      <div style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border-bottom:1px solid var(--border);">
+        <div style="flex-shrink:0;margin-top:2px;">
+          <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:${s.impact_direction==='negative'?'var(--red2)':s.impact_direction==='positive'?'var(--green)':'var(--amber)'};border:1px solid currentColor;padding:2px 7px;border-radius:3px;">
+            ${s.impact_direction==='negative'?'负面':s.impact_direction==='positive'?'正面':'双面'} ${s.impact_score}/10
+          </div>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:3px;">${s.source_comp} · ${s.source_title}</div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:6px;">${s.impact_summary}</div>
+          <div style="display:flex;gap:5px;">
+            ${(s.affected_segments||[]).map(seg=>`<span style="font-family:var(--mono);font-size:9px;padding:2px 7px;border:1px solid var(--border2);color:${SEG_COLORS[seg]||'var(--text2)'};">${SEG_LABELS[seg]||seg}</span>`).join('')}
+          </div>
+        </div>
+        <button onclick="confirmAndRun('${s.id}')" style="flex-shrink:0;background:var(--red);color:#fff;border:none;border-radius:4px;padding:7px 14px;font-family:var(--mono);font-size:10px;font-weight:700;cursor:pointer;letter-spacing:0.06em;">
+          🔮 发起推演
+        </button>
+      </div>`).join('');
+  }catch(e){console.error('loadSignals',e);}
+}
+
+async function confirmAndRun(signalId){
+  const btn=event.target;
+  btn.disabled=true;btn.textContent='推演中…';
+  try{
+    const r=await fetch('/api/inference/run',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':'US2026'},body:JSON.stringify({signal_id:signalId})});
+    const d=await r.json();
+    if(d.ok){showToast('推演已启动，约1-2分钟后完成');setTimeout(()=>{loadSignals();loadInferences();},90*1000);}
+  }catch(e){showToast('推演失败');}
+  finally{btn.disabled=false;btn.textContent='🔮 发起推演';}
+}
+
+async function runCustomInference(){
+  const title=document.getElementById('custom-title').value.trim();
+  const comp=document.getElementById('custom-comp').value.trim()||'自定义';
+  const direction=document.getElementById('custom-direction').value;
+  const segs=['solar','storage','datacenter'].filter(s=>document.getElementById('seg-'+s)?.checked);
+  if(!title){showToast('请输入事件描述');return;}
+  const btn=document.getElementById('custom-run-btn');
+  btn.disabled=true;btn.textContent='推演中…';
+  try{
+    // 先添加信号
+    const r1=await fetch('/api/signals/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,comp,segments:segs,direction,summary:title})});
+    const d1=await r1.json();
+    if(!d1.ok)throw new Error(d1.msg);
+    // 再发起推演
+    const r2=await fetch('/api/inference/run',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':'US2026'},body:JSON.stringify({signal_id:d1.signal.id})});
+    const d2=await r2.json();
+    if(d2.ok){
+      showToast('推演已启动，约1-2分钟后完成');
+      document.getElementById('custom-title').value='';
+      document.getElementById('custom-comp').value='';
+      setTimeout(()=>{loadSignals();loadInferences();},90*1000);
+    }
+  }catch(e){showToast('失败: '+e.message);}
+  finally{btn.disabled=false;btn.textContent='🔮 发起推演';}
+}
+
+let infFilter = 'draft';
+async function loadInferences(){
+  try{
+    const r=await fetch('/api/inferences?status='+infFilter);
+    const d=await r.json();
+    const list=d.inferences||[];
+    document.getElementById('draft-count-tag').textContent='草稿 '+(d.draftCount||0);
+    document.getElementById('pub-count-tag').textContent='已发布 '+(d.publishedCount||0);
+    const el=document.getElementById('inference-list');
+    if(!list.length){
+      const msg=infFilter==='draft'?'暂无待确认草稿':infFilter==='published'?'暂无已发布推演':'暂无推演记录';
+      el.innerHTML=`<div class="empty"><div class="empty-i">🔮</div><div class="empty-t">${msg}</div></div>`;
+      return;
+    }
+    el.innerHTML=list.map(inf=>renderInferenceCard(inf)).join('');
+  }catch(e){console.error('loadInferences',e);}
+}
+
+function setInfFilter(el,f){
+  document.querySelectorAll('#page-inference .pills .pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  infFilter=f;
+  loadInferences();
+}
+
+async function publishInference(id){
+  if(!confirm('确认将这条推演结果发布到网站？发布后所有人可见。'))return;
+  try{
+    const r=await fetch('/api/inferences/'+id+'/publish',{method:'POST',headers:{'x-admin-token':'US2026'}});
+    const d=await r.json();
+    if(d.ok){showToast('✓ 已发布');loadInferences();}
+  }catch(e){showToast('发布失败');}
+}
+
+async function unpublishInference(id){
+  try{
+    const r=await fetch('/api/inferences/'+id+'/unpublish',{method:'POST',headers:{'x-admin-token':'US2026'}});
+    const d=await r.json();
+    if(d.ok){showToast('已退回草稿');loadInferences();}
+  }catch(e){showToast('操作失败');}
+}
+
+async function deleteInference(id){
+  if(!confirm('确认删除这条推演记录？'))return;
+  try{
+    const r=await fetch('/api/inferences/'+id,{method:'DELETE',headers:{'x-admin-token':'US2026'}});
+    const d=await r.json();
+    if(d.ok){showToast('已删除');loadInferences();}
+  }catch(e){showToast('删除失败');}
+}
+
+function renderInferenceCard(inf){
+  const sc=inf.scenarios||{};
+  const base=sc.base||{};
+  const opt=sc.optimistic||{};
+  const pes=sc.pessimistic||{};
+  const deltaColor=v=>v>0?'var(--green)':v<0?'var(--red2)':'var(--text2)';
+  const fmtD=v=>v==null||isNaN(v)?'—':(v>0?'+':'')+parseFloat(v).toFixed(1);
+  const fmtP=v=>v==null||isNaN(v)?'—':(v>0?'+':'')+((v)*100).toFixed(1)+'%';
+
+  return `<div style="padding:16px;border-bottom:1px solid var(--border);${inf.status==='draft'?'background:rgba(224,168,46,0.03);':''}">
+    <!-- 事件标题 -->
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:10px;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+          ${inf.status==='draft'?'<span style="font-family:var(--mono);font-size:8px;font-weight:700;background:var(--amber-dim);color:var(--amber);padding:2px 6px;border-radius:3px;letter-spacing:0.08em;">待确认</span>':'<span style="font-family:var(--mono);font-size:8px;font-weight:700;background:var(--green-dim);color:var(--green);padding:2px 6px;border-radius:3px;letter-spacing:0.08em;">已发布</span>'}
+          <div style="font-size:13px;font-weight:500;color:var(--text);">${inf.event_title||'推演事件'}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);">${new Date(inf.createdAt).toLocaleString('zh-CN')} · ${inf.source_comp||''} · ${inf.time_horizon||''}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0;">
+        <button onclick="openInferenceDetail('${inf.id}')" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:5px 12px;font-family:var(--mono);font-size:9px;cursor:pointer;letter-spacing:0.08em;">详情</button>
+        ${inf.status==='draft'
+          ? `<button onclick="publishInference('${inf.id}')" style="background:var(--green);border:none;color:#fff;border-radius:4px;padding:5px 12px;font-family:var(--mono);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:0.08em;">✓ 确认发布</button>`
+          : `<button onclick="unpublishInference('${inf.id}')" style="background:none;border:1px solid var(--border2);color:var(--text2);border-radius:4px;padding:5px 10px;font-family:var(--mono);font-size:9px;cursor:pointer;">退回</button>`
+        }
+        <button onclick="deleteInference('${inf.id}')" style="background:none;border:1px solid var(--border2);color:var(--text3);border-radius:4px;padding:5px 8px;font-family:var(--mono);font-size:9px;cursor:pointer;">✕</button>
+      </div>
+    </div>
+    <!-- 因果链 -->
+    ${inf.causal_chain&&inf.causal_chain.length?`<div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap;">${inf.causal_chain.map((c,i)=>`<span style="font-size:10px;color:var(--text2);">${c}</span>${i<inf.causal_chain.length-1?'<span style="color:var(--text3);">→</span>':''}`).join('')}</div>`:''}
+    <!-- 三情景对比 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+      ${[['乐观',opt,'var(--green)'],['基准',base,'var(--amber)'],['悲观',pes,'var(--red2)']].map(([label,sc,col])=>`
+        <div style="background:var(--raised);border:1px solid var(--border);border-top:2px solid ${col};padding:10px 12px;border-radius:0 0 4px 4px;">
+          <div style="font-family:var(--mono);font-size:9px;color:${col};font-weight:700;letter-spacing:0.1em;margin-bottom:6px;">${label} · ${((sc.probability||0)*100).toFixed(0)}%</div>
+          <div style="font-size:18px;font-weight:600;color:${deltaColor(sc.total_revenue_delta)};font-family:var(--mono);line-height:1;">${fmtD(sc.total_revenue_delta)}亿</div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:6px;">营收影响 ${fmtP(sc.total_revenue_delta_pct)}</div>
+          <div style="font-size:11px;color:${deltaColor(sc.net_profit_delta)};">净利润 ${fmtD(sc.net_profit_delta)}亿</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:5px;line-height:1.5;">${sc.assumption||''}</div>
+        </div>`).join('')}
+    </div>
+    <!-- 业务线影响 -->
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+      ${Object.entries(SEG_LABELS).map(([k,label])=>{
+        const d=base.segments&&base.segments[k];
+        return d?`<div style="display:flex;align-items:center;gap:6px;"><span style="font-size:10px;color:${SEG_COLORS[k]};">${label}</span><span style="font-family:var(--mono);font-size:10px;color:${deltaColor(d.revenue_delta)};">${fmtD(d.revenue_delta)}亿 / 毛利率${d.margin_delta!=null?(d.margin_delta>0?'+':'')+((d.margin_delta||0)*100).toFixed(1)+'pp':'—'}</span></div>`:''
+      }).join('')}
+    </div>
+    <!-- 建议 -->
+    ${inf.recommendation?`<div style="background:var(--red-dim);border-left:2px solid var(--red);padding:8px 12px;border-radius:0 4px 4px 0;font-size:11px;color:var(--text);"><span style="font-family:var(--mono);font-size:9px;color:var(--red2);font-weight:700;letter-spacing:0.08em;">CFO建议</span><br>${inf.recommendation}</div>`:''}
+  </div>`;
+}
+
+function openInferenceDetail(id){
+  fetch('/api/inferences/'+id).then(r=>r.json()).then(inf=>{
+    const sc=inf.scenarios||{};
+    document.getElementById('minner').innerHTML=`
+      <div class="m-eye">${new Date(inf.createdAt).toLocaleString('zh-CN')} · ${inf.source_comp||''}</div>
+      <div class="m-title">${inf.event_title||'推演详情'}</div>
+      <div class="m-meta">${inf.time_horizon||''} · 置信度: ${inf.confidence||'—'}</div>
+      <div class="m-sec">事件背景与影响路径</div>
+      <div class="m-body">${inf.event_summary||''}</div>
+      <div class="m-sec">因果链</div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-bottom:4px;">${(inf.causal_chain||[]).map((c,i)=>`<div style="display:flex;align-items:center;gap:8px;"><span style="font-family:var(--mono);font-size:9px;color:var(--red2);width:16px;">${String(i+1).padStart(2,'0')}</span><span style="font-size:12px;color:var(--text2);">${c}</span></div>`).join('<div style="padding-left:24px;color:var(--text3);font-size:12px;">↓</div>')}</div>
+      <div class="m-sec">三情景财务推演</div>
+      ${['optimistic','base','pessimistic'].map(k=>{
+        const s=sc[k]||{};const labels={'optimistic':'乐观','base':'基准','pessimistic':'悲观'};const cols={'optimistic':'var(--green)','base':'var(--amber)','pessimistic':'var(--red2)'};
+        return `<div style="margin-bottom:12px;border:1px solid var(--border);border-top:2px solid ${cols[k]};padding:12px 14px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span style="font-family:var(--mono);font-size:10px;color:${cols[k]};font-weight:700;">${labels[k]}情景 · 概率${((s.probability||0)*100).toFixed(0)}%</span>
+            <span style="font-size:12px;color:var(--text2);">${s.assumption||''}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px;">
+            ${Object.entries(SEG_LABELS).map(([seg,label])=>{const d=s.segments&&s.segments[seg];return d?`<div style="background:var(--raised);padding:8px 10px;"><div style="font-size:10px;color:${SEG_COLORS[seg]};">${label}</div><div style="font-family:var(--mono);font-size:11px;color:${d.revenue_delta>=0?'var(--green)':'var(--red2)'};">${d.revenue_delta!=null?(d.revenue_delta>0?'+':'')+parseFloat(d.revenue_delta).toFixed(1)+'亿':'—'}</div><div style="font-size:10px;color:var(--text3);">毛利率${d.margin_delta!=null?(d.margin_delta>0?'+':'')+((d.margin_delta||0)*100).toFixed(1)+'pp':'—'}</div></div>`:''}).join('')}
+          </div>
+          <div style="display:flex;gap:16px;font-size:11px;">
+            <span>总营收影响：<strong style="color:${s.total_revenue_delta>=0?'var(--green)':'var(--red2)'};">${s.total_revenue_delta!=null?(s.total_revenue_delta>0?'+':'')+parseFloat(s.total_revenue_delta).toFixed(1)+'亿':'—'}</strong></span>
+            <span>净利润影响：<strong style="color:${s.net_profit_delta>=0?'var(--green)':'var(--red2)'};">${s.net_profit_delta!=null?(s.net_profit_delta>0?'+':'')+parseFloat(s.net_profit_delta).toFixed(1)+'亿':'—'}</strong></span>
+          </div>
+          ${s.strategic_response?`<div style="margin-top:6px;font-size:11px;color:var(--text2);">应对策略：${s.strategic_response}</div>`:''}
+          ${s.key_risk?`<div style="margin-top:4px;font-size:11px;color:var(--amber);">⚠ ${s.key_risk}</div>`:''}
+        </div>`;
+      }).join('')}
+      <div class="m-sec">加权影响汇总</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+        <div style="background:var(--raised);padding:12px;text-align:center;"><div style="font-family:var(--mono);font-size:9px;color:var(--text3);">加权营收影响</div><div style="font-size:20px;font-weight:600;color:${(inf.weighted_revenue_impact||0)>=0?'var(--green)':'var(--red2)'};">${inf.weighted_revenue_impact!=null?(inf.weighted_revenue_impact>0?'+':'')+parseFloat(inf.weighted_revenue_impact).toFixed(1)+'亿':'—'}</div></div>
+        <div style="background:var(--raised);padding:12px;text-align:center;"><div style="font-family:var(--mono);font-size:9px;color:var(--text3);">加权净利润影响</div><div style="font-size:20px;font-weight:600;color:${(inf.weighted_profit_impact||0)>=0?'var(--green)':'var(--red2)'};">${inf.weighted_profit_impact!=null?(inf.weighted_profit_impact>0?'+':'')+parseFloat(inf.weighted_profit_impact).toFixed(1)+'亿':'—'}</div></div>
+      </div>
+      ${inf.recommendation?`<div style="background:var(--red-dim);border-left:2px solid var(--red);padding:10px 14px;font-size:12px;color:var(--text);"><strong style="font-family:var(--mono);font-size:9px;color:var(--red2);">CFO建议</strong><br>${inf.recommendation}</div>`:''}`;
+    document.getElementById('mbg').classList.add('open');
+  }).catch(e=>showToast('加载失败'));
 }
 
 // ═══════════ INIT ═══════════
