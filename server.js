@@ -808,21 +808,53 @@ app.post('/api/inference/run', async (req, res) => {
 
   try {
     const result = await runInference(signal, 'manual');
+    result.status = 'draft';  // 推演结果先进草稿区，需手动确认才发布
     store.inferences = [result, ...(store.inferences||[])].slice(0, 50);
     // 标记信号已处理
     store.pendingSignals = (store.pendingSignals||[]).map(s =>
       s.id == signal_id ? { ...s, status: 'processed', inference_id: result.id } : s
     );
     saveStore(store);
-    console.log(`[INFERENCE] 推演完成: ${result.event_title}`);
+    console.log(`[INFERENCE] 推演完成(草稿): ${result.event_title}`);
   } catch(e) {
     console.error('[INFERENCE] 推演失败', e.message);
   }
 });
 
-// 获取推演历史
+// 确认发布推演结果
+app.post('/api/inferences/:id/publish', (req, res) => {
+  if (req.headers['x-admin-token'] !== ADMIN_TOKEN)
+    return res.status(403).json({ ok: false, msg: '无权限' });
+  const item = (store.inferences||[]).find(i => i.id === req.params.id);
+  if (!item) return res.status(404).json({ ok: false, msg: '不存在' });
+  item.status = 'published';
+  item.publishedAt = new Date().toISOString();
+  saveStore(store);
+  res.json({ ok: true });
+});
+
+// 退回草稿（取消发布）
+app.post('/api/inferences/:id/unpublish', (req, res) => {
+  if (req.headers['x-admin-token'] !== ADMIN_TOKEN)
+    return res.status(403).json({ ok: false, msg: '无权限' });
+  const item = (store.inferences||[]).find(i => i.id === req.params.id);
+  if (!item) return res.status(404).json({ ok: false, msg: '不存在' });
+  item.status = 'draft';
+  saveStore(store);
+  res.json({ ok: true });
+});
+
+// 获取推演历史（可按状态过滤）
 app.get('/api/inferences', (req, res) => {
-  res.json({ inferences: store.inferences || [], total: (store.inferences||[]).length });
+  const status = req.query.status; // draft / published / all
+  let list = store.inferences || [];
+  if (status && status !== 'all') {
+    list = list.filter(i => (i.status || 'published') === status);
+  }
+  res.json({ inferences: list, total: list.length,
+    draftCount: (store.inferences||[]).filter(i=>i.status==='draft').length,
+    publishedCount: (store.inferences||[]).filter(i=>(i.status||'published')==='published').length
+  });
 });
 
 // 获取单条推演详情
