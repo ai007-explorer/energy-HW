@@ -9,12 +9,16 @@ import { Resend } from 'resend';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-
+import attachAuth from './auth.js';                    // ← 新增
+import attachProjection from './projection-route.js';  // ← 新增
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 app.use(express.json());
+
+attachAuth(app);            // ← 新增（必须在 static 之前）
+attachProjection(app);      // ← 新增
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── 环境变量 ───
