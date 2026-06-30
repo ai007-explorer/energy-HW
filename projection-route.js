@@ -1,11 +1,15 @@
-// projection-route.js —— GET /api/projection
-// 用法(在 Express 主文件,创建 app 之后):
-//     require('./projection-route')(app);
-// 默认读取同目录下的 projection.json(由 gen_projection.py 生成)。
-const fs   = require('fs');
-const path = require('path');
+// projection-route.js (ESM) —— GET /api/projection
+// 用法(server.js 用 import):
+//     import attachProjection from './projection-route.js';
+//     attachProjection(app);
+// 默认读取项目根目录的 projection.json(由 gen_projection.py 生成)。
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-module.exports = function (app, opts = {}) {
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default function attachProjection(app, opts = {}) {
   const FILE = opts.file || path.join(__dirname, 'projection.json');
   app.get('/api/projection', (req, res) => {
     fs.readFile(FILE, 'utf8', (err, data) => {
@@ -14,4 +18,4 @@ module.exports = function (app, opts = {}) {
       res.type('application/json').send(data);
     });
   });
-};
+}
