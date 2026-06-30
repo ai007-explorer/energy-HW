@@ -1,15 +1,17 @@
-// auth.js —— 数字能源竞情平台 · 简单密码门
+// auth.js (ESM) —— 数字能源竞情平台 · 简单密码门
 // 共享密码 · 服务端校验 · HMAC 签名 Cookie(看源码无法绕过) · 无第三方依赖
 //
-// 用法:在 Express 主文件创建 app 之后、static 与业务路由之前加一行:
-//     const app = express();
-//     require('./auth')(app);        // ←← 就这一行
-//     // ...(你原有的 express.static / 路由)
+// 用法(server.js 用 import):
+//     import attachAuth from './auth.js';
+//     ...
+//     app.use(express.json());
+//     attachAuth(app);                 // ←← 放在 express.static 之前
+//     app.use(express.static(...));
 //
-// 密码与密钥建议用 Railway 环境变量配置(见文件底部说明)。
+// 密码与密钥建议用 Railway 环境变量配置(见文件底部)。
 
-const express = require('express');
-const crypto  = require('crypto');
+import express from 'express';
+import crypto from 'crypto';
 
 const PASSWORD = process.env.SITE_PASSWORD || 'caiguiup';                       // 访问密码
 const SECRET   = process.env.AUTH_SECRET   || 'de-platform-please-change-3f9a'; // Cookie 签名密钥
@@ -69,8 +71,8 @@ padding:9px;border-radius:8px;margin-bottom:14px}
   <div class="tip">仅限授权人员 · 登录状态保持 7 天</div>
 </form></body></html>`;
 
-module.exports = function attachAuth(app) {
-  // 仅为登录表单解析 body(不影响你现有的 body 解析)
+export default function attachAuth(app) {
+  // 仅为登录表单解析 body(不影响你已有的 express.json())
   app.use('/login', express.urlencoded({ extended: false }));
 
   // 提交密码
@@ -94,7 +96,7 @@ module.exports = function attachAuth(app) {
     if (check(readCookie(req))) return next();
     res.status(req.path === '/login' ? 200 : 401).send(page(''));
   });
-};
+}
 
 // ─────────────────────────────────────────────────────────────
 // Railway 环境变量(推荐,避免把密码写进代码仓库):
