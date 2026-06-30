@@ -400,6 +400,174 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex
     <div class="page" id="page-inference">
       <div class="sh"><div><div class="sh-eye">Impact Inference Engine</div><div class="sh-title">竞情影响推演</div></div><div class="sh-meta">信号识别 → 因果链分析 → 三情景财务推演</div></div>
 
+<!-- ════════════════════════════════════════════════════════════
+     经营推演底盘 · 三情景基线(v5 模型看板)
+     放置:贴进 <div class="page" id="page-inference"> 内,紧跟 .sh 之后、
+           「待确认高影响信号」那张 card 之前。
+     说明:复用本站设计系统(.card/.ch/.stat等)+ 已加载的 Chart.js;
+           数据走 /api/projection(失败回退内置)。图表在切到本页时初始化。
+     ════════════════════════════════════════════════════════════ -->
+<style>
+#op-dash .op-toggle{display:inline-flex;background:var(--raised);border:1px solid var(--border);border-radius:7px;padding:2px}
+#op-dash .op-toggle button{border:0;background:transparent;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--text2);padding:5px 12px;border-radius:5px;cursor:pointer;transition:all .12s}
+#op-dash .op-toggle button.on{background:var(--red);color:#fff}
+#op-dash .op-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:11px;margin-bottom:16px}
+#op-dash .op-segs{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+#op-dash .op-share{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)}
+#op-dash .op-share:last-child{border-bottom:none}
+#op-dash .cbox{position:relative;height:250px}
+@media(max-width:1100px){#op-dash .op-kpis{grid-template-columns:repeat(2,1fr)}#op-dash .op-segs{grid-template-columns:repeat(2,1fr)}}
+</style>
+
+<div class="card" id="op-dash" style="margin-bottom:14px;">
+  <div class="ch">
+    <div class="cht"><div class="cht-ico" style="background:var(--red-dim);">📊</div>经营推演底盘 · 三情景基线</div>
+    <div class="chr">
+      <span class="tag t-hw" id="op-anchor-tag">v5 · 锚定 875/318/131</span>
+      <div class="op-toggle" id="op-toggle">
+        <button data-s="悲观">悲观</button>
+        <button data-s="中性" class="on">中性</button>
+        <button data-s="乐观">乐观</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:16px;">
+    <div class="op-kpis" id="op-kpis"></div>
+
+    <div class="g2" style="margin-bottom:14px;">
+      <div class="card" style="margin:0;">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--green-dim);">📈</div>净销售收入趋势 · 2023–2029</div></div>
+        <div style="padding:14px;"><div class="cbox"><canvas id="op-trend"></canvas></div></div>
+      </div>
+      <div class="card" style="margin:0;">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--blue-dim);">🗂</div><span id="op-donut-title">2029 收入结构</span></div></div>
+        <div style="padding:14px;"><div class="cbox"><canvas id="op-donut"></canvas></div></div>
+      </div>
+    </div>
+
+    <div class="g2" style="margin-bottom:14px;">
+      <div class="card" style="margin:0;">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--purple-dim);">💰</div>贡献利润趋势 · 2025–2029</div></div>
+        <div style="padding:14px;"><div class="cbox"><canvas id="op-contrib"></canvas></div></div>
+      </div>
+      <div class="card" style="margin:0;">
+        <div class="ch"><div class="cht"><div class="cht-ico" style="background:var(--gold-dim);">📡</div>华为份额演进 · 2026→2029</div></div>
+        <div style="padding:6px 16px;" id="op-shares"></div>
+      </div>
+    </div>
+
+    <div class="op-segs" id="op-segs"></div>
+
+    <div style="font-size:10px;color:var(--text3);line-height:1.7;margin-top:13px;font-family:var(--mono);">
+      数据源 v5 经营推演模型 · 市场空间引用国信/中金/华经/EVTank/QYResearch · 份额参考 Wood Mackenzie 并对实测核验 · 净销售锚定领导口径(2025=773/2026=875)· 情景由「需求(70%)+份额(30%)」驱动涌现 · 仅供内部研判
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  if(window.__opDash) return; window.__opDash=true;
+  const FALLBACK={"years": [2023, 2024, 2025, 2026, 2027, 2028, 2029], "netSales": {"悲观": [531.9, 645, 772.9, 819.9, 837.5, 886.1, 940.8], "中性": [531.9, 645, 772.9, 875.0, 958.2, 1083.5, 1229.0], "乐观": [531.9, 645, 772.9, 896.3, 1007.2, 1167.5, 1357.0]}, "contrib": {"悲观": [null, null, 121.0, 112.7, 85.8, 86.7, 89.1], "中性": [null, null, 121.0, 131.0, 116.3, 132.6, 152.8], "乐观": [null, null, 121.0, 140.6, 131.9, 155.8, 185.6]}, "gp": {"悲观": [null, null, 295.0, 291.6, 276.7, 291.9, 308.0], "中性": [null, null, 295.0, 318.0, 324.4, 365.2, 411.1], "乐观": [null, null, 295.0, 330.7, 346.9, 400.1, 461.5]}, "seg": {"悲观": {"逆变器": [255.5, 218.9, 226.5, 227.7, 229.8], "储能": [220.9, 265.1, 285.9, 310.0, 336.9], "数据中心": [156.1, 168.2, 181.8, 196.9, 213.8], "智能电动": [128.1, 135.5, 143.3, 151.5, 160.3]}, "中性": {"逆变器": [255.5, 234.9, 260.3, 279.3, 300.1], "储能": [220.9, 285.8, 331.4, 385.6, 449.0], "数据中心": [156.1, 175.9, 199.6, 228.0, 262.4], "智能电动": [128.1, 146.3, 166.9, 190.5, 217.5]}, "乐观": {"逆变器": [255.5, 241.1, 274.0, 301.3, 331.2], "储能": [220.9, 293.8, 349.9, 417.7, 498.6], "数据中心": [156.1, 178.8, 206.8, 241.3, 284.2], "智能电动": [128.1, 150.5, 176.6, 207.1, 243.0]}}, "cagr": {"悲观": 5.0, "中性": 12.3, "乐观": 15.1}, "shares": [{"name": "逆变器 · 欧洲", "a": 35, "b": 30, "note": "地缘下行(高风险供应商名单)", "t": "down"}, {"name": "逆变器 · 海外其他", "a": 15, "b": 18, "note": "新兴市场先发", "t": "up"}, {"name": "逆变器 · 中国", "a": 12, "b": 12, "note": "格局稳固", "t": "flat"}, {"name": "储能 · 欧洲", "a": 10, "b": 12, "note": "户储渠道+品牌", "t": "up"}, {"name": "储能 · 海外其他", "a": 8, "b": 11, "note": "大储中标(中东)", "t": "up"}, {"name": "数据中心供电 · 全球", "a": 12, "b": 12.2, "note": "核验上调(模块化UPS全球#1)", "t": "flat"}, {"name": "智能电动 · 中国电驱", "a": 14.8, "b": 15.6, "note": "DriveONE 独立一供#1", "t": "up"}], "anchor": {"ns": 875, "gp": 318, "cp": 131}};
+  let DATA=FALLBACK, cur='中性', charts=null, inited=false;
+  const yrs=DATA.years;
+  const $=id=>document.getElementById(id);
+  const fmt=n=>n==null?'—':n.toLocaleString('en-US',{maximumFractionDigits:0});
+  const cagr=(a,b,n)=>((Math.pow(b/a,1/n)-1)*100);
+  const SC=['悲观','中性','乐观'];
+  const COL={悲观:'#8B9AAD',中性:'#FF6B5E',乐观:'#2ECC71'};
+  const SEGN=['逆变器','储能','数据中心','智能电动'];
+  const SEGC=['#7C8BA0','#E8453C','#3B9EFF','#E0A82E'];
+  const SEGTAG=['现金牛 · 低增长/高毛利(38%+)','增长引擎 · CAGR 最高','中速 · HVDC 上行期权','中速 · 独立一供 #1'];
+
+  function lineSets(o){return SC.map(s=>({label:s,data:o[s],borderColor:COL[s],backgroundColor:COL[s],
+    borderWidth:s===cur?2.6:1.4,borderDash:s===cur?[]:[5,4],pointRadius:s===cur?2.6:0,pointHoverRadius:5,tension:.3,fill:false,order:s===cur?0:1}));}
+  const opt=()=>({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    plugins:{legend:{position:'bottom',labels:{color:'#8B9AAD',boxWidth:12,font:{size:10.5},padding:12,usePointStyle:true}},
+      tooltip:{backgroundColor:'#161C23',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#E6EDF5',bodyColor:'#8B9AAD',padding:10,
+        callbacks:{label:c=>c.dataset.label+'：'+fmt(c.parsed.y)+' 亿'}}},
+    scales:{x:{grid:{display:false},ticks:{color:'#8B9AAD',font:{size:10}}},
+      y:{grid:{color:'rgba(255,255,255,0.06)'},ticks:{color:'#8B9AAD',font:{size:10}}}}});
+
+  function kpis(){
+    const ns=DATA.netSales[cur],cp=DATA.contrib[cur];
+    const ns26=ns[3],ns29=ns[6],cp29=cp[6],cg=DATA.cagr[cur],pm=cp29/ns29*100;
+    const a=(DATA.meta&&DATA.meta.anchor2026)||{ns:875,gp:318,cp:131};
+    const cards=[
+      ['var(--red)','2026 净销售',fmt(ns26),'亿',cur==='中性'?'= 领导口径锚定':'vs 中性 '+(ns26>a.ns?'+':'')+fmt(ns26-a.ns)+' 亿'],
+      ['var(--blue)','2029 净销售',fmt(ns29),'亿','较 2026 '+(ns29>ns26?'+':'')+fmt(ns29-ns26)+' 亿'],
+      ['var(--gold)','收入 CAGR · 25→29',cg.toFixed(1),'%',cur+'情景'],
+      ['var(--purple)','2029 贡献利润',fmt(cp29),'亿',cp29>=121?'高于 2025 基数':'低于 2025 基数'],
+      ['var(--green)','2029 贡献利润率',pm.toFixed(1),'%','报告口径']
+    ];
+    $('op-kpis').innerHTML=cards.map(c=>`<div class="stat" style="--accent:${c[0]};">
+      <div class="stat-label">${c[1]}</div>
+      <div class="stat-big" style="font-size:23px;font-family:var(--mono);">${c[2]}<span style="font-size:12px;color:var(--text2);"> ${c[3]}</span></div>
+      <div class="stat-desc">${c[4]}</div></div>`).join('');
+    const at=$('op-anchor-tag'); if(at) at.textContent='v5 · 锚定 '+a.ns+'/'+a.gp+'/'+a.cp;
+  }
+  function shares(){
+    $('op-shares').innerHTML=(DATA.shares||[]).map(s=>{
+      const w=Math.min(100,s.b/40*100), ar=s.t==='up'?'↑':s.t==='down'?'↓':'→';
+      const col=s.t==='down'?'var(--red2)':s.t==='up'?'var(--green)':'var(--blue)';
+      return `<div class="op-share">
+        <div style="flex:0 0 120px;font-size:12px;font-weight:500;color:var(--text);">${s.name}<span style="display:block;font-size:9px;color:var(--text3);font-weight:400;">${s.note}</span></div>
+        <div style="flex:1;height:7px;background:var(--raised);border-radius:4px;overflow:hidden;"><i style="display:block;width:${w}%;height:100%;border-radius:4px;background:${col};"></i></div>
+        <div style="flex:0 0 86px;text-align:right;font-family:var(--mono);font-size:11.5px;color:var(--text);">${s.a}% <span style="color:${col};">${ar}</span> <b>${s.b}%</b></div></div>`;}).join('');
+  }
+  function segs(){
+    $('op-segs').innerHTML=SEGN.map((nm,i)=>{
+      const a=DATA.seg[cur][nm][0],b=DATA.seg[cur][nm][4],cg=cagr(a,b,4);
+      const cgc=cg>=12?'var(--green)':cg>=6?'var(--gold)':'var(--text2)';
+      return `<div style="background:var(--raised);border:1px solid var(--border);border-top:2px solid ${SEGC[i]};border-radius:6px;padding:13px;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);">${nm}</div>
+        <div style="font-size:10px;color:var(--text3);margin:2px 0 9px;min-height:26px;">${SEGTAG[i]}</div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;">
+          <span style="font-size:21px;font-weight:600;font-family:var(--mono);color:var(--text);">${fmt(b)}<span style="font-size:11px;color:var(--text3);"> 亿</span></span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text3);">2025 ${fmt(a)} →</span></div>
+        <div style="font-family:var(--mono);font-size:11px;font-weight:700;color:${cgc};margin-top:6px;">CAGR ${cg.toFixed(1)}%</div></div>`;}).join('');
+  }
+  function buildCharts(){
+    if(!window.Chart) return;
+    charts={
+      trend:new Chart($('op-trend'),{type:'line',data:{labels:yrs,datasets:lineSets(DATA.netSales)},options:opt()}),
+      contrib:new Chart($('op-contrib'),{type:'line',data:{labels:yrs,datasets:lineSets(DATA.contrib)},options:opt()}),
+      donut:new Chart($('op-donut'),{type:'doughnut',data:{labels:SEGN,datasets:[{data:SEGN.map(s=>DATA.seg[cur][s][4]),backgroundColor:SEGC,borderWidth:2,borderColor:'#111722'}]},
+        options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+          plugins:{legend:{position:'bottom',labels:{color:'#8B9AAD',boxWidth:12,font:{size:10.5},padding:11,usePointStyle:true}},
+            tooltip:{backgroundColor:'#161C23',borderColor:'rgba(255,255,255,0.1)',borderWidth:1,titleColor:'#E6EDF5',bodyColor:'#8B9AAD',padding:10,
+              callbacks:{label:c=>c.label+'：'+fmt(c.parsed)+' 亿 ('+(c.parsed/c.dataset.data.reduce((a,b)=>a+b,0)*100).toFixed(0)+'%)'}}}}})
+    };
+  }
+  function refresh(){
+    if(!charts) return;
+    charts.trend.data.datasets=lineSets(DATA.netSales); charts.trend.update();
+    charts.contrib.data.datasets=lineSets(DATA.contrib); charts.contrib.update();
+    charts.donut.data.datasets[0].data=SEGN.map(s=>DATA.seg[cur][s][4]); charts.donut.update();
+    const t=$('op-donut-title'); if(t) t.textContent=cur+'情景 · 2029 收入结构';
+  }
+  function renderText(){ kpis(); shares(); segs(); }
+
+  $('op-toggle').addEventListener('click',e=>{
+    const b=e.target.closest('button'); if(!b) return; cur=b.dataset.s;
+    [].forEach.call(document.querySelectorAll('#op-toggle button'),x=>x.classList.toggle('on',x===b));
+    renderText(); refresh();
+  });
+
+  // 文本先渲染(用回退数据)
+  renderText();
+  // 拉接口,成功则替换并刷新
+  fetch('/api/projection',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json();})
+    .then(d=>{ if(d&&d.netSales){ DATA=d; renderText(); if(inited) refresh(); } }).catch(()=>{});
+
+  // 切到「影响推演」页(本卡可见)时再建图表,避免隐藏时尺寸为0
+  const host=$('op-dash'), page=host.closest('.page');
+  function tryInit(){ if(inited) return; if(!page || page.classList.contains('on')){ inited=true; requestAnimationFrame(()=>{ buildCharts(); refresh(); }); } }
+  if(page){ new MutationObserver(()=>{ if(page.classList.contains('on')) tryInit(); }).observe(page,{attributes:true,attributeFilter:['class']}); }
+  tryInit(); // 若加载时已可见
+})();
+</script>
+
+
       <!-- 待确认信号 -->
       <div class="card" style="margin-bottom:14px;">
         <div class="ch">
