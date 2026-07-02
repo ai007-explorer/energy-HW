@@ -1,0 +1,43 @@
+# probot/settings repository config
+# https://github.com/repository-settings/app
+#
+# Note: GitHub "branch protection" cannot take effect via native .github files; it is repository setting data.
+# This file is a workaround — after installing the probot-settings App, committing this file applies it as repo settings;
+# otherwise it is just a declaration and does not affect the repo, configure manually under Settings → Branches.
+
+repository:
+  name: energy-HW
+  description: Huawei Digital Energy competitive intelligence platform (energy-intel)
+  has_issues: true
+  has_projects: false
+  has_wiki: false
+  has_discussions: false
+  default_branch: main
+  # Use squash merge only to keep linear history
+  allow_squash_merge: true
+  allow_merge_commit: false
+  allow_rebase_merge: false
+  delete_branch_on_merge: true
+
+branches:
+  - name: main
+    protection:
+      # Required status checks (CI).
+      # ⚠️ The context name must match the check name actually reported by Actions:
+      #    format is "<workflow name> / <job name>", e.g. "ci / build".
+      #    After the first CI run, verify under Settings → Branches and adjust if needed.
+      required_status_checks:
+        strict: true # require branch to be up-to-date with base before merging
+        contexts:
+          - ci / build
+          - AI Code Review (Zhipu GLM) / glm-review
+      enforce_admins: false
+      required_pull_request_reviews:
+        required_approving_review_count: 1
+        dismiss_stale_reviews: true # clear stale approvals after a new push
+        require_code_owner_reviews: true # enforce owner approval per CODEOWNERS
+        # require_last_push_approval: true # optional: require re-approval after the last push
+      restrictions: null # free tier of public repos does not support push restrictions
+      required_linear_history: true
+      allow_force_pushes: false
+      allow_deletions: false

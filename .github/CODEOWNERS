@@ -1,0 +1,33 @@
+# CODEOWNERS — Maintainer governance (inspired by openai/codex)
+# https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# Rule: patterns later in the file take precedence (last match wins).
+#       Hence the catch-all * is at the top, specific paths below.
+# With branch protection (require_code_owner_reviews):
+#   a PR touching a path must be approved by its owner before merging.
+#
+# ⚠️ Currently falls back to the @ai007-explorer org. To split roles later:
+#   maintainer = @someone   (final merge decision on source)
+#   committer  = @someone,@someone (governance / CI / docs approval)
+# Just replace @ai007-explorer below with concrete GitHub usernames.
+
+# ── Default catch-all (anything not matched above → whole org) ───────────
+*                                           @ai007-explorer
+
+# ── Core source (recommend sole approval; replace @ai007-explorer with maintainer username)
+/server.js                                   @ai007-explorer
+/auth.js                                     @ai007-explorer
+/projection-route.js                         @ai007-explorer
+/gen_projection.py                           @ai007-explorer
+/public/                                     @ai007-explorer
+
+# ── Governance / CI / merge mechanism (changes need broader visibility) ──
+/.github/CODEOWNERS                         @ai007-explorer
+/.github/settings.yml                       @ai007-explorer
+/.github/workflows/                         @ai007-explorer
+/.github/                                   @ai007-explorer
+
+# ── Docs / deployment config ─────────────────────────────────────────────
+/README.md                                  @ai007-explorer
+/railway.json                               @ai007-explorer
+/projection.json                            @ai007-explorer

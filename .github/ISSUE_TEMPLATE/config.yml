@@ -1,0 +1,5 @@
+# Issue template chooser configuration
+# https://docs.github.com/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository#configuring-the-template-chooser
+
+# Disable the "open a blank issue" entry so contributors use a structured template
+blank_issues_enabled: false

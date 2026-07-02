@@ -1,0 +1,121 @@
+name: AI Code Review (Zhipu GLM)
+
+# Auto-review on PR events; also re-run manually by posting /glm-review or @zhipu as a PR comment.
+# Prerequisite: ZHIPUAI_API_KEY (Settings → Secrets). Optional: ZHIPU_MODEL / ZHIPU_BASE_URL (Variables).
+# Gracefully skips when no key is configured. Only OWNER/MEMBER/COLLABORATOR may trigger via comment.
+# Note: an issue_comment-triggered workflow only runs after it is merged to main
+# (GitHub runs comment triggers from the default branch only).
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  glm-review:
+    if: >-
+      github.repository == 'ai007-explorer/energy-HW' && (
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (
+          github.event_name == 'issue_comment' &&
+          github.event.issue.pull_request != null &&
+          (contains(github.event.comment.body, '/glm-review') || contains(github.event.comment.body, '@zhipu')) &&
+          contains(fromJson('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+        )
+      )
+    runs-on: ubuntu-latest
+    env:
+      GH_REPO: ${{ github.repository }}
+      GH_TOKEN: ${{ github.token }}
+      ZHIPUAI_API_KEY: ${{ secrets.ZHIPUAI_API_KEY }}
+      ZHIPU_BASE_URL: ${{ vars.ZHIPU_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4' }}
+      ZHIPU_MODEL: ${{ vars.ZHIPU_MODEL || 'glm-4.6' }}
+    steps:
+      - name: React to trigger comment
+        if: github.event_name == 'issue_comment'
+        env:
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: gh api -X POST repos/"$GH_REPO"/issues/comments/"$COMMENT_ID"/reactions -f content=rocket || true
+
+      - name: Check API key presence
+        id: has_key
+        env:
+          ZHIPUAI_API_KEY: ${{ secrets.ZHIPUAI_API_KEY }}
+        run: |
+          if [ -n "$ZHIPUAI_API_KEY" ]; then
+            echo "has_key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_key=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ZHIPUAI_API_KEY is not configured, skipping AI review. Add it under Settings → Secrets and variables → Actions."
+          fi
+
+      - name: Resolve PR number
+        if: steps.has_key.outputs.has_key == 'true'
+        id: pr
+        run: |
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            echo "num=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "num=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Connectivity probe (runner → Zhipu)
+        if: steps.has_key.outputs.has_key == 'true'
+        continue-on-error: true
+        run: |
+          echo "Probing reachability of ${ZHIPU_BASE_URL} (US runner → .cn)..."
+          curl -sS -o /dev/null \
+            -w "http=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s\n" \
+            --max-time 25 "${ZHIPU_BASE_URL}" \
+            || echo "⚠️ Cannot reach Zhipu endpoint from runner (cross-ocean link may be unstable; script will retry)"
+
+      - name: Checkout PR head
+        if: steps.has_key.outputs.has_key == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ steps.pr.outputs.num }}/head
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        if: steps.has_key.outputs.has_key == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Gather PR diff & metadata
+        if: steps.has_key.outputs.has_key == 'true'
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.num }}
+        run: |
+          set -euo pipefail
+          # Use gh to fetch the PR diff directly (works for both triggers); truncate to 60KB to fit context.
+          gh pr diff "$PR_NUMBER" | head -c 60000 > pr.diff
+          echo "diff_bytes=$(wc -c < pr.diff)" >> "$GITHUB_STEP_SUMMARY"
+          gh pr view "$PR_NUMBER" --json title,body > pr_meta.json
+
+      - name: Run GLM code review
+        if: steps.has_key.outputs.has_key == 'true'
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.num }}
+          DIFF_FILE: pr.diff
+          META_FILE: pr_meta.json
+        run: node .github/scripts/glm-review.mjs review.md
+
+      - name: Post review comment
+        if: steps.has_key.outputs.has_key == 'true'
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.num }}
+        run: |
+          if [ -s review.md ]; then
+            gh pr comment "$PR_NUMBER" --body-file review.md
+          else
+            echo "No review content, skipping comment."
+          fi

@@ -1,0 +1,61 @@
+name: 🐛 Bug Report
+description: Report a defect or unexpected behavior in the energy-intel platform
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, please search for existing issues. If you find one, add a 👍 instead of creating a duplicate.
+        ⚠️ Do **not** paste ANTHROPIC_API_KEY / Resend API keys / subscriber emails / auth tokens or any other sensitive data. Redact first.
+
+  - type: input
+    id: module
+    attributes:
+      label: Affected module
+      description: Homepage / Subscription / Projection endpoint / Scheduled crawl / Email sending / Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the error. Paste the full error message (redact sensitive info first).
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: How do you reproduce it step by step?
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      value: |
+        - Node version:
+        - Deployment (local / Railway):
+        - Trigger time (if related to scheduled tasks):
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant server / client logs (make sure to redact secrets).
+      render: shell

@@ -1,0 +1,35 @@
+name: ✨ Feature Request
+description: Propose a new feature or improvement for the energy-intel platform
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before submitting, please search for existing requests. If you find a similar one, add a 👍.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What is currently awkward or missing?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Your proposed solution
+      description: How would you like it to work? For example, a new endpoint, a subscription option, a projection dimension.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context

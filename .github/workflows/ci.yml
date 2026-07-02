@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # This project has no build step (plain JS, ESM, runs via `npm start`),
+      # so use `node --check` for syntax validation to prevent low-level syntax errors hitting main.
+      - name: Syntax check (.js)
+        run: |
+          set -e
+          for f in *.js; do
+            echo "checking $f ..."
+            node --check "$f"
+          done
+
+      # Smoke start: confirm server.js can at least load modules and not crash immediately.
+      # Provide a dummy required env var so startup does not throw on a missing key; a 5s timeout means load succeeded.
+      - name: Smoke start (5s)
+        env:
+          PORT: '0'
+          ANTHROPIC_API_KEY: dummy-smoke-test-key
+        run: |
+          timeout 5 node server.js && code=0 || code=$?
+          # exit code 124 means timeout killed the process = it stayed up = expected
+          if [ "$code" = "124" ] || [ "$code" = "0" ]; then
+            echo "smoke start OK (exit=$code)"
+            exit 0
+          else
+            echo "smoke start FAILED (exit=$code)"
+            exit "$code"
+          fi
