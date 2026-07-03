@@ -6,28 +6,29 @@
 # With branch protection (require_code_owner_reviews):
 #   a PR touching a path must be approved by its owner before merging.
 #
-# ⚠️ Currently falls back to the @ai007-explorer org. To split roles later:
-#   maintainer = @someone   (final merge decision on source)
-#   committer  = @someone,@someone (governance / CI / docs approval)
-# Just replace @ai007-explorer below with concrete GitHub usernames.
+# Roles:
+#   maintainer = @JackyChen-China   (final merge decision on source code)
+#   committer  = @ai007-explorer org (governance / CI / docs approval)
+# Source changes need maintainer approval; governance/CI/docs changes need
+# at least one committer.
 
 # ── Default catch-all (anything not matched above → whole org) ───────────
 *                                           @ai007-explorer
 
-# ── Core source (recommend sole approval; replace @ai007-explorer with maintainer username)
-/server.js                                   @ai007-explorer
-/auth.js                                     @ai007-explorer
-/projection-route.js                         @ai007-explorer
-/gen_projection.py                           @ai007-explorer
-/public/                                     @ai007-explorer
+# ── Core source (maintainer only) ────────────────────────────────────────
+/server.js                                   @JackyChen-China
+/auth.js                                     @JackyChen-China
+/projection-route.js                         @JackyChen-China
+/gen_projection.py                           @JackyChen-China
+/public/                                     @JackyChen-China
 
 # ── Governance / CI / merge mechanism (changes need broader visibility) ──
-/.github/CODEOWNERS                         @ai007-explorer
-/.github/settings.yml                       @ai007-explorer
-/.github/workflows/                         @ai007-explorer
-/.github/                                   @ai007-explorer
+/.github/CODEOWNERS                         @ai007-explorer @JackyChen-China
+/.github/settings.yml                       @ai007-explorer @JackyChen-China
+/.github/workflows/                         @ai007-explorer @JackyChen-China
+/.github/                                   @ai007-explorer @JackyChen-China
 
 # ── Docs / deployment config ─────────────────────────────────────────────
-/README.md                                  @ai007-explorer
-/railway.json                               @ai007-explorer
-/projection.json                            @ai007-explorer
+/README.md                                  @ai007-explorer @JackyChen-China
+/railway.json                               @ai007-explorer @JackyChen-China
+/projection.json                            @ai007-explorer @JackyChen-China
