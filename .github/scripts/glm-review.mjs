@@ -15,7 +15,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const apiKey = process.env.ZHIPUAI_API_KEY;
 const baseUrl = (process.env.ZHIPU_BASE_URL || "https://open.bigmodel.cn/api/paas/v4").replace(/\/+$/, "");
-const model = process.env.ZHIPU_MODEL || "glm-4.6";
+const model = process.env.ZHIPU_MODEL || "glm-5.2";
 const diffFile = process.env.DIFF_FILE;
 const outFile = process.argv[2];
 
@@ -78,10 +78,10 @@ Review focus (project-specific):
 5. Robustness: external API failures, missing Railway env vars, edge cases (empty subscriber list / empty competitor feed).
 6. Maintainability: naming, duplication, obvious simplifications.
 
-Output format (concise Markdown, respond in Chinese 中文):
-- **变更摘要**: 1-2 句话说明本 PR 做了什么。
-- **审查结论**: 按 🔴必须修改 / 🟡建议优化 / 🟢看起来不错 分级, 每条给出 文件:行号 与理由; 没有问题的等级可省略。
-- 只针对本次 diff, 语气友好。`;
+Output format (concise Markdown, English):
+- **Summary**: 1-2 sentences on what this PR does.
+- **Findings**: group as 🔴Must fix / 🟡Suggested / 🟢Looks good; each with file:line and rationale; omit levels with no issues.
+- Focus only on this diff; keep a friendly tone.`;
 
 const payload = {
   model,
