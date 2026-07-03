@@ -15,7 +15,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 const apiKey = process.env.ZHIPUAI_API_KEY;
 const baseUrl = (process.env.ZHIPU_BASE_URL || "https://open.bigmodel.cn/api/paas/v4").replace(/\/+$/, "");
-const model = process.env.ZHIPU_MODEL || "glm-5.2";
+const model = process.env.ZHIPU_MODEL || "glm-5";
 const diffFile = process.env.DIFF_FILE;
 const outFile = process.argv[2];
 
