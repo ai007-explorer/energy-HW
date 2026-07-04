@@ -137,7 +137,6 @@ let result;
 for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
   try {
     result = await postChat(180000);
-    break;
   } catch (err) {
     console.error(`Attempt ${attempt}/${MAX_ATTEMPTS} failed: ${err.message}`);
     if (attempt === MAX_ATTEMPTS) {
@@ -149,7 +148,15 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       process.exit(1);
     }
     await new Promise((r) => setTimeout(r, attempt * 4000));
+    continue;
   }
+  // Retry transient server errors (502/503/504); other 4xx fall through and fail after the loop.
+  if (result.status >= 500 && attempt < MAX_ATTEMPTS) {
+    console.error(`Attempt ${attempt}/${MAX_ATTEMPTS}: server returned ${result.status}, retrying...`);
+    await new Promise((r) => setTimeout(r, attempt * 4000));
+    continue;
+  }
+  break;
 }
 
 if (result.status >= 400) {
