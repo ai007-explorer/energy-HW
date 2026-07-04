@@ -111,7 +111,7 @@ jobs:
 
       - name: Checkout PR head
         if: steps.has_key.outputs.has_key == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: refs/pull/${{ steps.pr.outputs.num }}/head
           fetch-depth: 1
