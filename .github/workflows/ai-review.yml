@@ -22,6 +22,7 @@ concurrency:
 
 jobs:
   glm-review:
+    name: glm-review
     if: >-
       github.repository == 'ai007-explorer/energy-HW' && (
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false) || (
@@ -77,14 +78,15 @@ jobs:
           if [ -z "$LLM_MDL" ] && [ -n "$ZHIPU_MDL" ]; then
             echo "::warning::Using legacy ZHIPU_MODEL — migrate to LLM_MODEL."
           fi
-          # Partial migration: some LLM_* set, others not → risk mixing providers
-          # (e.g. new key with default/legacy URL → silent 401 from wrong endpoint)
-          LLM_SET=0
-          [ -n "$LLM_KEY" ] && LLM_SET=$((LLM_SET+1))
-          [ -n "$LLM_URL" ] && LLM_SET=$((LLM_SET+1))
-          [ -n "$LLM_MDL" ] && LLM_SET=$((LLM_SET+1))
-          if [ "$LLM_SET" -gt 0 ] && [ "$LLM_SET" -lt 3 ]; then
-            echo "::warning::Partial LLM_* migration: ${LLM_SET}/3 set — config may mix providers. Set all of LLM_API_KEY / LLM_BASE_URL / LLM_MODEL, or none."
+          # Custom-provider intent is signaled by LLM_BASE_URL being set; if so,
+          # LLM_API_KEY and LLM_MODEL should be set too. "Only LLM_API_KEY set"
+          # (relying on the built-in zhipu/glm-5 defaults) is a valid config and
+          # is intentionally NOT warned here.
+          if [ -n "$LLM_URL" ] && [ -z "$LLM_KEY" ]; then
+            echo "::warning::LLM_BASE_URL is set but LLM_API_KEY is not — key will fall back and likely mix providers."
+          fi
+          if [ -n "$LLM_URL" ] && [ -z "$LLM_MDL" ]; then
+            echo "::warning::LLM_BASE_URL is set but LLM_MODEL is not — model will fall back and likely mix providers."
           fi
 
       - name: Resolve PR number
