@@ -57,6 +57,20 @@ jobs:
             echo "::notice::LLM_API_KEY is not configured, skipping AI review. Add it under Settings → Secrets and variables → Actions."
           fi
 
+      - name: Warn on legacy fallback
+        if: steps.has_key.outputs.has_key == 'true'
+        env:
+          LLM_KEY: ${{ secrets.LLM_API_KEY }}
+          ZHIPU_KEY: ${{ secrets.ZHIPUAI_API_KEY }}
+          LLM_URL: ${{ vars.LLM_BASE_URL }}
+          ZHIPU_URL: ${{ vars.ZHIPU_BASE_URL }}
+          LLM_MDL: ${{ vars.LLM_MODEL }}
+          ZHIPU_MDL: ${{ vars.ZHIPU_MODEL }}
+        run: |
+          [ -z "$LLM_KEY" ] && [ -n "$ZHIPU_KEY" ] && echo "::warning::Using legacy ZHIPUAI_API_KEY — migrate to LLM_API_KEY." || true
+          [ -z "$LLM_URL" ] && [ -n "$ZHIPU_URL" ] && echo "::warning::Using legacy ZHIPU_BASE_URL — migrate to LLM_BASE_URL." || true
+          [ -z "$LLM_MDL" ] && [ -n "$ZHIPU_MDL" ] && echo "::warning::Using legacy ZHIPU_MODEL — migrate to LLM_MODEL." || true
+
       - name: Resolve PR number
         if: steps.has_key.outputs.has_key == 'true'
         id: pr
