@@ -9,6 +9,7 @@
 # Roles:
 #   maintainer = @JackyChen-China   (final merge decision on source code)
 #   committer  = @ai007-explorer org (governance / CI / docs approval)
+#   .github governance also requires @trublion1116
 # Source changes need maintainer approval; governance/CI/docs changes need
 # at least one committer.
 
@@ -23,10 +24,10 @@
 /public/                                     @JackyChen-China
 
 # ── Governance / CI / merge mechanism (changes need broader visibility) ──
-/.github/CODEOWNERS                         @ai007-explorer @JackyChen-China
-/.github/settings.yml                       @ai007-explorer @JackyChen-China
-/.github/workflows/                         @ai007-explorer @JackyChen-China
-/.github/                                   @ai007-explorer @JackyChen-China
+/.github/CODEOWNERS                         @ai007-explorer @JackyChen-China @trublion1116
+/.github/settings.yml                       @ai007-explorer @JackyChen-China @trublion1116
+/.github/workflows/                         @ai007-explorer @JackyChen-China @trublion1116
+/.github/                                   @ai007-explorer @JackyChen-China @trublion1116
 
 # ── Docs / deployment config ─────────────────────────────────────────────
 /README.md                                  @ai007-explorer @JackyChen-China
