@@ -24,9 +24,9 @@
 /public/                                     @JackyChen-China
 
 # ── Governance / CI / merge mechanism (changes need broader visibility) ──
-/.github/CODEOWNERS                         @ai007-explorer @JackyChen-China @trublion1116
-/.github/settings.yml                       @ai007-explorer @JackyChen-China @trublion1116
-/.github/workflows/                         @ai007-explorer @JackyChen-China @trublion1116
+# A single /.github/ rule covers every file under .github/ (CODEOWNERS,
+# settings.yml, workflows/, scripts/). CODEOWNERS is last-match-wins, so
+# listing specific files above a directory rule would be overridden anyway.
 /.github/                                   @ai007-explorer @JackyChen-China @trublion1116
 
 # ── Docs / deployment config ─────────────────────────────────────────────

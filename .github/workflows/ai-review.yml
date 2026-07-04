@@ -67,9 +67,25 @@ jobs:
           LLM_MDL: ${{ vars.LLM_MODEL }}
           ZHIPU_MDL: ${{ vars.ZHIPU_MODEL }}
         run: |
-          [ -z "$LLM_KEY" ] && [ -n "$ZHIPU_KEY" ] && echo "::warning::Using legacy ZHIPUAI_API_KEY — migrate to LLM_API_KEY." || true
-          [ -z "$LLM_URL" ] && [ -n "$ZHIPU_URL" ] && echo "::warning::Using legacy ZHIPU_BASE_URL — migrate to LLM_BASE_URL." || true
-          [ -z "$LLM_MDL" ] && [ -n "$ZHIPU_MDL" ] && echo "::warning::Using legacy ZHIPU_MODEL — migrate to LLM_MODEL." || true
+          # Per-variable legacy fallback
+          if [ -z "$LLM_KEY" ] && [ -n "$ZHIPU_KEY" ]; then
+            echo "::warning::Using legacy ZHIPUAI_API_KEY — migrate to LLM_API_KEY."
+          fi
+          if [ -z "$LLM_URL" ] && [ -n "$ZHIPU_URL" ]; then
+            echo "::warning::Using legacy ZHIPU_BASE_URL — migrate to LLM_BASE_URL."
+          fi
+          if [ -z "$LLM_MDL" ] && [ -n "$ZHIPU_MDL" ]; then
+            echo "::warning::Using legacy ZHIPU_MODEL — migrate to LLM_MODEL."
+          fi
+          # Partial migration: some LLM_* set, others not → risk mixing providers
+          # (e.g. new key with default/legacy URL → silent 401 from wrong endpoint)
+          LLM_SET=0
+          [ -n "$LLM_KEY" ] && LLM_SET=$((LLM_SET+1))
+          [ -n "$LLM_URL" ] && LLM_SET=$((LLM_SET+1))
+          [ -n "$LLM_MDL" ] && LLM_SET=$((LLM_SET+1))
+          if [ "$LLM_SET" -gt 0 ] && [ "$LLM_SET" -lt 3 ]; then
+            echo "::warning::Partial LLM_* migration: ${LLM_SET}/3 set — config may mix providers. Set all of LLM_API_KEY / LLM_BASE_URL / LLM_MODEL, or none."
+          fi
 
       - name: Resolve PR number
         if: steps.has_key.outputs.has_key == 'true'

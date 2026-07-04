@@ -4,6 +4,8 @@
 // Env vars (LLM_* are primary; ZHIPU_* are read as a legacy fallback for backward compatibility):
 //   LLM_API_KEY      provider API key (required)
 //   LLM_BASE_URL     OpenAI-compatible base URL, e.g. https://api.openai.com/v1
+//                    (must NOT embed credentials as a query param — use header auth only,
+//                     since baseUrl is interpolated into error/troubleshooting logs)
 //   LLM_MODEL        model id, e.g. gpt-4o / astron-code-latest / glm-5
 //   PR_NUMBER        PR number (optional)
 //   META_FILE        PR metadata JSON ({title, body}) path (optional, takes precedence over the two below)
