@@ -1,10 +1,10 @@
 // .github/scripts/glm-review.mjs
-// Review PR diffs with Zhipu GLM; write the result to the file path given as the first argument.
+// Review PR diffs with an OpenAI-compatible chat model; write the result to the file path given as the first argument.
 // Uses node:https directly (generous timeout + auto-retry for cross-ocean connections), no external deps.
-// Env vars:
-//   ZHIPUAI_API_KEY  Zhipu API key (required)
-//   ZHIPU_BASE_URL   default https://open.bigmodel.cn/api/paas/v4
-//   ZHIPU_MODEL      default glm-4.6
+// Env vars (LLM_* are primary; ZHIPU_* are read as a legacy fallback for backward compatibility):
+//   LLM_API_KEY      provider API key (required)
+//   LLM_BASE_URL     OpenAI-compatible base URL, e.g. https://api.openai.com/v1
+//   LLM_MODEL        model id, e.g. gpt-4o / astron-code-latest / glm-5
 //   PR_NUMBER        PR number (optional)
 //   META_FILE        PR metadata JSON ({title, body}) path (optional, takes precedence over the two below)
 //   PR_TITLE/PR_BODY PR metadata (optional fallback)
@@ -13,14 +13,14 @@
 import https from "node:https";
 import { readFileSync, writeFileSync } from "node:fs";
 
-const apiKey = process.env.ZHIPUAI_API_KEY;
-const baseUrl = (process.env.ZHIPU_BASE_URL || "https://open.bigmodel.cn/api/paas/v4").replace(/\/+$/, "");
-const model = process.env.ZHIPU_MODEL || "glm-5";
+const apiKey = process.env.LLM_API_KEY || process.env.ZHIPUAI_API_KEY;
+const baseUrl = (process.env.LLM_BASE_URL || process.env.ZHIPU_BASE_URL || "https://open.bigmodel.cn/api/paas/v4").replace(/\/+$/, "");
+const model = process.env.LLM_MODEL || process.env.ZHIPU_MODEL || "glm-5";
 const diffFile = process.env.DIFF_FILE;
 const outFile = process.argv[2];
 
 if (!apiKey) {
-  console.error("ZHIPUAI_API_KEY is not set");
+  console.error("LLM_API_KEY is not set");
   process.exit(2);
 }
 if (!diffFile) {
@@ -141,8 +141,7 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (attempt === MAX_ATTEMPTS) {
       console.error("Max retries reached, giving up.");
       console.error(
-        "Troubleshooting: if errors are consistently timeout/ECONNRESET, it is usually unstable cross-ocean " +
-          "connectivity from the GitHub runner (US) to open.bigmodel.cn.\n" +
+        `Troubleshooting: if errors are consistently timeout/ECONNRESET, the GitHub runner may not reliably reach ${baseUrl}.\n` +
           "Re-run the workflow; if it persists long-term, consider a self-hosted runner or a proxy."
       );
       process.exit(1);
@@ -152,7 +151,7 @@ for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
 }
 
 if (result.status >= 400) {
-  console.error(`Zhipu API returned ${result.status}: ${result.data.slice(0, 500)}`);
+  console.error(`LLM API returned ${result.status}: ${result.data.slice(0, 500)}`);
   process.exit(1);
 }
 

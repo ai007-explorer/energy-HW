@@ -1,7 +1,7 @@
-name: AI Code Review (Zhipu GLM)
+name: AI Code Review
 
 # Auto-review on PR events; also re-run manually by posting /glm-review or @zhipu as a PR comment.
-# Prerequisite: ZHIPUAI_API_KEY (Settings → Secrets). Optional: ZHIPU_MODEL / ZHIPU_BASE_URL (Variables).
+# Prerequisite: LLM_API_KEY (Settings → Secrets). Optional: LLM_BASE_URL / LLM_MODEL (Variables).
 # Gracefully skips when no key is configured. Only OWNER/MEMBER/COLLABORATOR may trigger via comment.
 # Note: an issue_comment-triggered workflow only runs after it is merged to main
 # (GitHub runs comment triggers from the default branch only).
@@ -35,9 +35,9 @@ jobs:
     env:
       GH_REPO: ${{ github.repository }}
       GH_TOKEN: ${{ github.token }}
-      ZHIPUAI_API_KEY: ${{ secrets.ZHIPUAI_API_KEY }}
-      ZHIPU_BASE_URL: ${{ vars.ZHIPU_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4' }}
-      ZHIPU_MODEL: ${{ vars.ZHIPU_MODEL || 'glm-5' }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.ZHIPUAI_API_KEY }}
+      LLM_BASE_URL: ${{ vars.LLM_BASE_URL || vars.ZHIPU_BASE_URL || 'https://open.bigmodel.cn/api/paas/v4' }}
+      LLM_MODEL: ${{ vars.LLM_MODEL || vars.ZHIPU_MODEL || 'glm-5' }}
     steps:
       - name: React to trigger comment
         if: github.event_name == 'issue_comment'
@@ -48,13 +48,13 @@ jobs:
       - name: Check API key presence
         id: has_key
         env:
-          ZHIPUAI_API_KEY: ${{ secrets.ZHIPUAI_API_KEY }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY || secrets.ZHIPUAI_API_KEY }}
         run: |
-          if [ -n "$ZHIPUAI_API_KEY" ]; then
+          if [ -n "$LLM_API_KEY" ]; then
             echo "has_key=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_key=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::ZHIPUAI_API_KEY is not configured, skipping AI review. Add it under Settings → Secrets and variables → Actions."
+            echo "::notice::LLM_API_KEY is not configured, skipping AI review. Add it under Settings → Secrets and variables → Actions."
           fi
 
       - name: Resolve PR number
@@ -67,15 +67,15 @@ jobs:
             echo "num=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Connectivity probe (runner → Zhipu)
+      - name: Connectivity probe (runner → LLM endpoint)
         if: steps.has_key.outputs.has_key == 'true'
         continue-on-error: true
         run: |
-          echo "Probing reachability of ${ZHIPU_BASE_URL} (US runner → .cn)..."
+          echo "Probing reachability of ${LLM_BASE_URL}..."
           curl -sS -o /dev/null \
             -w "http=%{http_code} dns=%{time_namelookup}s connect=%{time_connect}s tls=%{time_appconnect}s total=%{time_total}s\n" \
-            --max-time 25 "${ZHIPU_BASE_URL}" \
-            || echo "⚠️ Cannot reach Zhipu endpoint from runner (cross-ocean link may be unstable; script will retry)"
+            --max-time 25 "${LLM_BASE_URL}" \
+            || echo "⚠️ Cannot reach the LLM endpoint from runner (network may be unstable; script will retry)"
 
       - name: Checkout PR head
         if: steps.has_key.outputs.has_key == 'true'
